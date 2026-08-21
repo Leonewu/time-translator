@@ -1,5 +1,8 @@
 import { createSettingsSaver, getProviderPreset, loadSettings, normalizeCustomKeywords, PROVIDER_PRESETS, saveSettings } from "./shared/config.js";
+import { applyI18n, getMessage as t } from "./shared/i18n.js";
 import { listAvailableModels } from "./shared/llm.js";
+
+applyI18n();
 
 const provider = document.querySelector("#provider");
 const model = document.querySelector("#model");
@@ -27,7 +30,7 @@ const saveSettingsInOrder = createSettingsSaver(saveSettings);
 for (const [key, value] of Object.entries(PROVIDER_PRESETS)) {
   const option = document.createElement("option");
   option.value = key;
-  option.textContent = value.label;
+  option.textContent = t(`provider_${key}`);
   provider.append(option);
 }
 
@@ -51,23 +54,24 @@ function fillProviderFields(usePreset = false) {
   const preset = getProviderPreset(provider.value);
   if (usePreset || !endpoint.value) endpoint.value = preset.endpoint;
   if (usePreset || !model.value) model.value = preset.model;
-  providerHint.textContent = preset.hint;
+  providerHint.textContent = t(`hint_${provider.value}`);
 }
 
 function updateConfigState(value = readForm()) {
   const configured = Boolean(value.llm.apiKey && value.llm.endpoint && value.llm.model);
-  configState.textContent = configured ? `已连接 · ${PROVIDER_PRESETS[value.llm.provider]?.label || value.llm.provider}` : "未配置 API Key";
+  const providerLabel = t(`provider_${value.llm.provider}`);
+  configState.textContent = configured ? t("statusConnected", { provider: providerLabel }) : t("statusNotConfigured");
   configState.classList.toggle("ready", configured);
 }
 
 function updatePluginState() {
-  pluginState.textContent = autoConvert.checked ? "选中后自动检测并转换" : "仅右键手动检测";
+  pluginState.textContent = autoConvert.checked ? t("autoConvertEnabled") : t("autoConvertDisabled");
   pluginState.classList.toggle("disabled", !autoConvert.checked);
 }
 
 function updateApiKeyVisibility() {
   const visible = apiKey.type === "text";
-  const label = visible ? "隐藏 API Key" : "显示 API Key";
+  const label = visible ? t("hideApiKey") : t("showApiKey");
   toggleApiKey.setAttribute("aria-label", label);
   toggleApiKey.setAttribute("aria-pressed", String(visible));
   toggleApiKey.title = label;
@@ -77,7 +81,7 @@ function updateApiKeyVisibility() {
 function applyTheme(theme) {
   const dark = theme === "dark";
   document.documentElement.dataset.theme = dark ? "dark" : "light";
-  const label = dark ? "切换到日间模式" : "切换到夜间模式";
+  const label = dark ? t("themeToLight") : t("themeToDark");
   themeToggle.setAttribute("aria-label", label);
   themeToggle.setAttribute("aria-pressed", String(dark));
   themeToggle.title = label;
@@ -102,16 +106,16 @@ function writeModelOptions(models) {
 async function refreshModelOptions() {
   const current = readForm();
   if (!current.llm.apiKey || !current.llm.endpoint) {
-    setModelStatus("填好 API Key 和 Endpoint 后再刷新。", "error");
+    setModelStatus(t("modelRefreshRequired"), "error");
     return;
   }
   refreshModels.disabled = true;
   refreshModels.classList.add("is-loading");
-  setModelStatus("正在读取当前服务商的模型列表…", "loading");
+  setModelStatus(t("modelLoading"), "loading");
   try {
     const models = await listAvailableModels({ config: current.llm });
     writeModelOptions(models);
-    setModelStatus(`已找到 ${models.length} 个模型，可直接选择或继续手动填写。`, "ready");
+    setModelStatus(t("modelFound", { count: models.length }), "ready");
   } catch (error) {
     setModelStatus(error.message || "暂时无法读取模型列表，可继续手动填写模型名。", "error");
   } finally {
@@ -133,24 +137,25 @@ function writeForm(value) {
   fillProviderFields();
   updateConfigState(value);
   updatePluginState();
+  updateApiKeyVisibility();
 }
 
 async function persistForm() {
   const snapshot = readForm();
   try {
     settings = await saveSettingsInOrder(snapshot);
-    saveStatus.textContent = "已自动保存";
+    saveStatus.textContent = t("saved");
     setTimeout(() => {
-      if (saveStatus.textContent === "已自动保存") saveStatus.textContent = "输入后自动保存";
+      if (saveStatus.textContent === t("saved")) saveStatus.textContent = t("saveDefault");
     }, 1800);
   } catch {
-    saveStatus.textContent = "保存失败";
+    saveStatus.textContent = t("saveFailed");
   }
 }
 
 function scheduleSave(delay = 350) {
   updateConfigState();
-  saveStatus.textContent = "保存中…";
+  saveStatus.textContent = t("saving");
   clearTimeout(saveTimer);
   if (delay === 0) {
     void persistForm();
@@ -165,7 +170,7 @@ function showTest(value) {
   testJson.textContent = JSON.stringify(value, null, 2);
   if (!value?.ok) {
     testResult.classList.add("error");
-    testResult.textContent = value?.reason || value?.error || "无法确定时间";
+    testResult.textContent = value?.reason || value?.error || t("testUnknown");
     return;
   }
   testResult.classList.add("success");
@@ -176,7 +181,7 @@ function runTest() {
   const current = readForm();
   testButton.disabled = true;
   testResult.className = "test-result muted";
-  testResult.textContent = "正在请求模型…";
+  testResult.textContent = t("testRequesting");
   testJson.hidden = true;
   chrome.runtime.sendMessage(
     { type: "TEST_LLM", text: testText.value.trim(), settings: current },

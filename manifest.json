@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Time Translator",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "元气100%的时区转换工具：轻松读懂时差。",
   "icons": {
     "16": "src/assets/icon-16.png",

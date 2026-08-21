@@ -100,6 +100,7 @@ button { cursor: pointer; }
 .section-heading em { color: var(--faint); font-size: 10px; font-style: normal; margin-left: auto; }
 .field-grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
 label { color: var(--muted); display: flex; flex-direction: column; font-size: 10px; font-weight: 700; gap: 6px; letter-spacing: .04em; margin-top: 11px; min-width: 0; }
+.field-label { display: block; }
 select, input, textarea { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; color: var(--paper); min-width: 0; outline: none; padding: 9px 10px; width: 100%; }
 select { font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 input { font-size: 11px; overflow: hidden; text-overflow: ellipsis; }
@@ -149,6 +150,6 @@ select:focus, input:focus, textarea:focus { border-color: var(--lime); box-shado
 .model-status-error { color: var(--orange); }
 .model-status-ready { color: var(--green); }
 .model-status-loading { color: var(--paper); }
-footer { align-items: center; color: var(--faint); display: flex; font-size: 9px; gap: 10px; justify-content: space-between; padding-top: 14px; }
-.feedback-link { color: var(--green); text-decoration: none; }
+footer { align-items: center; color: var(--faint); display: flex; font-size: 9px; gap: 10px; justify-content: flex-start; padding-top: 14px; }
+.feedback-link { color: var(--green); margin-left: auto; text-decoration: none; }
 .feedback-link:hover, .feedback-link:focus-visible { color: var(--lime); text-decoration: underline; }

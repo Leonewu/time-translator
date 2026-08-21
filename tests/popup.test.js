@@ -5,11 +5,13 @@ import { readFile } from "node:fs/promises";
 const popupHtml = await readFile(new URL("../src/popup.html", import.meta.url), "utf8");
 const popupJs = await readFile(new URL("../src/popup.js", import.meta.url), "utf8");
 const popupCss = await readFile(new URL("../src/popup.css", import.meta.url), "utf8");
+const i18nSource = await readFile(new URL("../src/shared/i18n.js", import.meta.url), "utf8");
 const manifest = await readFile(new URL("../manifest.json", import.meta.url), "utf8");
 
 test("Popup 提供插件总开关，不再提供独立保存按钮或自动弹出配置", () => {
   assert.match(popupHtml, /id="autoConvert"/);
-  assert.match(popupHtml, /选中后自动检测并转换/);
+  assert.match(popupHtml, /id="pluginState"/);
+  assert.match(popupHtml, /data-i18n-title="autoConvertTitle"/);
   assert.doesNotMatch(popupHtml, /showAutomatically|选中明确时间后自动弹出/);
   assert.doesNotMatch(popupHtml, /保存配置/);
 });
@@ -26,16 +28,17 @@ test("API Key 失焦时立即落盘，避免 Popup 测试成功但选区转换�
 
 test("API Key 提供眼睛按钮切换显示和隐藏", () => {
   assert.match(popupHtml, /id="apiKey" type="password"/);
-  assert.match(popupHtml, /id="toggleApiKey"[^>]+aria-label="显示 API Key"/);
+  assert.match(popupHtml, /id="toggleApiKey"[^>]+data-i18n-aria-label="showApiKey"/);
   assert.match(popupJs, /const toggleApiKey = document\.querySelector\("#toggleApiKey"\)/);
   assert.match(popupJs, /apiKey\.type === "password" \? "text" : "password"/);
+  assert.match(popupJs, /t\("hideApiKey"\)/);
   assert.match(popupJs, /toggleApiKey\.addEventListener\("click"/);
 });
 
 test("Popup 提供可持久化的日间/夜间模式切换", () => {
   assert.match(popupHtml, /data-theme="light"/);
   assert.match(popupHtml, /id="themeToggle"/);
-  assert.match(popupHtml, /切换到夜间模式/);
+  assert.match(popupJs, /t\("themeToDark"\)/);
   assert.match(popupJs, /document\.documentElement\.dataset\.theme/);
   assert.match(popupJs, /themeToggle\.addEventListener\("click"/);
   assert.match(popupCss, /:root\[data-theme="dark"\]/);
@@ -58,8 +61,9 @@ test("切换服务商会自动同步对应的 Endpoint 和模型名", () => {
 
 test("Popup 提供自定义关键词输入框", () => {
   assert.match(popupHtml, /id="customKeywords"/);
-  assert.match(popupHtml, /自定义触发词/);
-  assert.match(popupHtml, /触发词只决定是否发起检测，不会补全时间/);
+  assert.match(popupHtml, /data-i18n="customKeywords"/);
+  assert.match(popupHtml, /data-i18n="customKeywordsNote"/);
+  assert.doesNotMatch(popupHtml, /触发词只决定是否发起检测/);
   assert.match(popupJs, /customKeywords/);
   assert.match(popupJs, /customKeywords\.addEventListener\("input", \(\) => scheduleSave\(0\)\)/);
   assert.match(popupJs, /createSettingsSaver/);
@@ -67,14 +71,14 @@ test("Popup 提供自定义关键词输入框", () => {
 
 test("Popup 提供反馈邮件入口和当前版本号", () => {
   assert.match(popupHtml, /mailto:reon\.hypr@gmail\.com\?subject=Time%20Translator%20Feedback/);
-  assert.match(popupHtml, />反馈<\/a>/);
-  assert.match(popupHtml, />v0\.1\.4<\/span>/);
-  assert.match(manifest, /"version": "0\.1\.4"/);
+  assert.match(popupHtml, /data-i18n="feedback"/);
+  assert.match(popupHtml, />v0\.1\.5<\/span>/);
+  assert.match(popupCss, /\.feedback-link \{[^}]*margin-left:\s*auto/);
+  assert.match(manifest, /"version": "0\.1\.5"/);
 });
 
 test("Popup 明确在线模型只接收选中文本", () => {
-  assert.match(popupHtml, /发起转换或刷新模型列表时，必要的请求会发送到你选择的模型服务商/);
-  assert.match(popupHtml, /不会发送整页内容/);
+  assert.match(popupHtml, /data-i18n="privacyNote"/);
 });
 
 test("Popup 和扩展 manifest 使用时区小云朵 logo", () => {
@@ -84,7 +88,7 @@ test("Popup 和扩展 manifest 使用时区小云朵 logo", () => {
 });
 
 test("产品名称统一为 Time Translator", () => {
-  assert.match(popupHtml, /<title>Time Translator · 元气100%<\/title>/);
+  assert.match(popupHtml, /<title data-i18n="popupTitle">Time Translator<\/title>/);
   assert.match(popupHtml, /TIME TRANSLATOR/);
   assert.match(popupHtml, /<h1 class="brand-title">Time Translator<\/h1>/);
   assert.doesNotMatch(popupHtml, /class="energy-mark"/);
@@ -97,7 +101,15 @@ test("在线测试嵌入模型连接区", () => {
   assert.match(popupCss, /\.test-heading/);
 });
 
+test("Popup 支持按浏览器语言切换中英文，未知语言回退英文", () => {
+  const i18n = popupJs.replace(/\s+/g, " ");
+  assert.match(popupHtml, /data-i18n="customKeywordsNote"/);
+  assert.match(popupHtml, /<html lang="en"/);
+  assert.match(i18n, /applyI18n\(\)/);
+  assert.match(i18n, /getMessage as t/);
+});
+
 test("品牌文案包含元气 100% 标识", () => {
-  assert.match(popupHtml, /元气100%/);
+  assert.match(i18nSource, /energyLine: "元气100%/);
   assert.match(manifest, /元气100%的时区转换工具/);
 });

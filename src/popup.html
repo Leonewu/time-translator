@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="zh-CN" data-theme="light">
+<html lang="en" data-theme="light">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Time Translator · 元气100%</title>
+    <title data-i18n="popupTitle">Time Translator</title>
     <link rel="stylesheet" href="./popup.css" />
   </head>
   <body>
@@ -18,102 +18,101 @@
             <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 15.7A8.6 8.6 0 0 1 8.3 3.5 8.7 8.7 0 1 0 20.5 15.7Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
             <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 2.4v2.1M12 19.5v2.1M4.1 4.1l1.5 1.5M18.4 18.4l1.5 1.5M2.4 12h2.1M19.5 12h2.1M4.1 19.9l1.5-1.5M18.4 5.6l1.5-1.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
           </button>
-          <div class="target-mark">北京时间<br /><strong>UTC+8</strong></div>
+          <div class="target-mark"><span data-i18n="targetBeijing">Beijing time</span><br /><strong>UTC+8</strong></div>
         </div>
       </header>
 
       <section class="hero-line">
         <div class="hero-copy">
-          <p>在线模型解析 · 本地时区换算</p>
-          <span class="energy-line">元气100% · 轻松读懂时区</span>
+          <p data-i18n="heroLine">Online model parsing · Local timezone conversion</p>
+          <span class="energy-line" data-i18n="energyLine">100% energy · Read time zones with ease</span>
         </div>
         <div class="hero-meta">
-          <span id="configState" class="config-state">未配置</span>
-          <label class="master-switch" title="控制选中并释放鼠标后是否自动检测并转换">
+          <span id="configState" class="config-state" data-i18n="statusNotConfigured">API key not configured</span>
+          <label class="master-switch" data-i18n-title="autoConvertTitle" title="Automatically detect and convert after you select and release text">
             <input id="autoConvert" type="checkbox" />
             <span class="switch-track"><span></span></span>
-            <span id="pluginState">选中后自动检测并转换</span>
+            <span id="pluginState">Auto-detect after selection</span>
           </label>
         </div>
       </section>
 
       <div id="config-form" class="config-form">
         <section class="section-block">
-          <div class="section-heading"><span>01</span><strong>模型连接</strong></div>
+          <div class="section-heading"><span>01</span><strong data-i18n="modelConnection">Model connection</strong></div>
           <div class="field-grid">
-            <label>服务商
+            <label><span class="field-label" data-i18n="provider">Provider</span>
               <select id="provider"></select>
             </label>
-            <label class="model-field">模型名
+            <label class="model-field"><span class="field-label" data-i18n="model">Model</span>
               <span class="model-input-row">
-                <input id="model" list="modelOptions" placeholder="例如 qwen-plus" />
-                <button type="button" id="refreshModels" class="field-action" aria-label="刷新可用模型" title="刷新可用模型"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 0 0-14.8-3.9L3 9.5M4 13a8 8 0 0 0 14.8 3.9L21 14.5M3 9.5h5.5M21 14.5h-5.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+                <input id="model" list="modelOptions" data-i18n-placeholder="modelPlaceholder" placeholder="e.g. qwen-plus" />
+                <button type="button" id="refreshModels" class="field-action" data-i18n-aria-label="modelRefresh" data-i18n-title="modelRefresh" aria-label="Refresh available models" title="Refresh available models"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 0 0-14.8-3.9L3 9.5M4 13a8 8 0 0 0 14.8 3.9L21 14.5M3 9.5h5.5M21 14.5h-5.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
               </span>
               <datalist id="modelOptions"></datalist>
-              <span id="modelStatus" class="field-note">填好 API Key 后可刷新当前服务商的模型列表。</span>
+              <span id="modelStatus" class="field-note" data-i18n="modelListHint">Enter an API key to refresh the model list.</span>
             </label>
           </div>
-          <label>API Key
+          <label><span class="field-label" data-i18n="apiKey">API key</span>
             <span class="secret-input">
-              <input id="apiKey" type="password" autocomplete="off" placeholder="只保存在本机扩展存储" />
-              <button type="button" id="toggleApiKey" class="secret-toggle" aria-label="显示 API Key" aria-pressed="false" title="显示 API Key">
+              <input id="apiKey" type="password" autocomplete="off" data-i18n-placeholder="apiKeyPlaceholder" placeholder="Stored only in this browser" />
+              <button type="button" id="toggleApiKey" class="secret-toggle" data-i18n-aria-label="showApiKey" data-i18n-title="showApiKey" aria-label="Show API key" aria-pressed="false" title="Show API key">
                 <svg class="eye-icon eye-open" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.2 12s3.5-5.3 9.8-5.3S21.8 12 21.8 12 18.3 17.3 12 17.3 2.2 12 2.2 12Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="12" r="2.8" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
                 <svg class="eye-icon eye-closed" viewBox="0 0 24 24" aria-hidden="true"><path d="m3 3 18 18M10.6 6.9A10.5 10.5 0 0 1 12 6.7c6.3 0 9.8 5.3 9.8 5.3a18 18 0 0 1-3.2 3.6M6.7 6.9C3.8 8.3 2.2 12 2.2 12S5.7 17.3 12 17.3c1.3 0 2.5-.2 3.5-.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
               </button>
             </span>
           </label>
-          <label>Endpoint
-            <input id="endpoint" type="url" placeholder="https://.../chat/completions" />
+          <label><span class="field-label" data-i18n="endpoint">Endpoint</span>
+            <input id="endpoint" type="url" data-i18n-placeholder="endpointPlaceholder" placeholder="https://.../chat/completions" />
           </label>
           <p id="providerHint" class="hint"></p>
-          <p class="privacy-note">仅在发起转换或刷新模型列表时，必要的请求会发送到你选择的模型服务商；不会发送整页内容。API Key 只保存在本机扩展存储。</p>
+          <p class="privacy-note" data-i18n="privacyNote">Requests are sent to your selected model provider only when converting text or refreshing models. The full page is never sent. Your API key stays in this browser.</p>
           <div class="test-block inline-test">
-            <div class="test-heading"><strong>在线测试</strong><em>发送给当前模型</em></div>
+            <div class="test-heading"><strong data-i18n="onlineTest">Online test</strong><em data-i18n="onlineTestNote">Sent to the current model</em></div>
             <div class="test-input-row">
-              <input id="testText" value="today before 3 pm UK" aria-label="测试英文时间表达" />
-              <button type="button" id="testLlm" class="test-button">运行</button>
+              <input id="testText" value="today before 3 pm UK" data-i18n-aria-label="testInputAria" aria-label="English time expression to test" />
+              <button type="button" id="testLlm" class="test-button" data-i18n="run">Run</button>
             </div>
-            <div id="testResult" class="test-result muted">填写 API Key 后运行测试。</div>
+            <div id="testResult" class="test-result muted" data-i18n="testReady">Enter an API key to run a test.</div>
             <pre id="testJson" class="test-json" hidden></pre>
           </div>
         </section>
 
         <section class="section-block compact-block">
-          <div class="section-heading"><span>02</span><strong>转换偏好</strong></div>
+          <div class="section-heading"><span>02</span><strong data-i18n="conversionPreferences">Conversion preferences</strong></div>
           <div class="field-grid">
-            <label>目标时区
+            <label><span class="field-label" data-i18n="targetTimezone">Target timezone</span>
               <select id="targetTimeZone">
-                <option value="Asia/Shanghai">北京时间 · Asia/Shanghai</option>
-                <option value="Asia/Tokyo">日本时间 · Asia/Tokyo</option>
-                <option value="Europe/London">英国时间 · Europe/London</option>
-                <option value="America/New_York">美国东部 · America/New_York</option>
-                <option value="UTC">UTC</option>
+                <option value="Asia/Shanghai" data-i18n="timezoneBeijing">Beijing time · Asia/Shanghai</option>
+                <option value="Asia/Tokyo" data-i18n="timezoneJapan">Japan time · Asia/Tokyo</option>
+                <option value="Europe/London" data-i18n="timezoneUK">UK time · Europe/London</option>
+                <option value="America/New_York" data-i18n="timezoneUSEastern">US Eastern · America/New_York</option>
+                <option value="UTC" data-i18n="timezoneUTC">UTC</option>
               </select>
             </label>
-            <label>未写时区时按
+            <label><span class="field-label" data-i18n="defaultSourceTimezone">Assume timezone when omitted</span>
               <select id="defaultSourceTimeZone">
-                <option value="Europe/London">英国 · Europe/London</option>
-                <option value="America/New_York">美国东部 · America/New_York</option>
-                <option value="America/Los_Angeles">美国太平洋 · America/Los_Angeles</option>
-                <option value="Asia/Tokyo">日本 · Asia/Tokyo</option>
+                <option value="Europe/London" data-i18n="sourceUK">UK · Europe/London</option>
+                <option value="America/New_York" data-i18n="sourceUSEastern">US Eastern · America/New_York</option>
+                <option value="America/Los_Angeles" data-i18n="sourceUSPacific">US Pacific · America/Los_Angeles</option>
+                <option value="Asia/Tokyo" data-i18n="sourceJapan">Japan · Asia/Tokyo</option>
                 <option value="UTC">UTC</option>
               </select>
             </label>
           </div>
-          <label>自定义触发词
-            <textarea id="customKeywords" rows="3" placeholder="每行一个，例如：EOD&#10;release window"></textarea>
-            <span class="field-note">每行一个，也支持逗号或分号；空格会保留为短语，匹配不区分大小写。</span>
-            <span class="field-note">触发词只决定是否发起检测，不会补全时间；例如填 <code>today before</code>，完整选中 <code>today before 3 pm UK</code> 会触发，单独选中这两个词仍会因缺少具体时刻而失败。</span>
+          <label><span class="field-label" data-i18n="customKeywords">Custom triggers</span>
+            <textarea id="customKeywords" rows="3" data-i18n-placeholder="customKeywordsPlaceholder" placeholder="One word or phrase per line, e.g. EOD&#10;release window"></textarea>
+            <span class="field-note" data-i18n="customKeywordsNote">One word or phrase per line; commas and semicolons also work.</span>
           </label>
         </section>
 
-        <div class="form-actions"><span id="saveStatus" class="save-status" role="status">输入后自动保存</span></div>
+        <div class="form-actions"><span id="saveStatus" class="save-status" role="status" data-i18n="saveDefault">Changes save automatically</span></div>
       </div>
 
       <footer>
-        <span>API Key 仅保存在此浏览器</span>
-        <a class="feedback-link" href="mailto:reon.hypr@gmail.com?subject=Time%20Translator%20Feedback" aria-label="发送反馈邮件">反馈</a>
-        <span>v0.1.4</span>
+        <span data-i18n="footerKey">API key stays in this browser</span>
+        <span>v0.1.5</span>
+        <a class="feedback-link" href="mailto:reon.hypr@gmail.com?subject=Time%20Translator%20Feedback" data-i18n="feedback" data-i18n-aria-label="feedbackAria" aria-label="Send feedback email">Feedback</a>
       </footer>
     </main>
     <script type="module" src="./popup.js"></script>

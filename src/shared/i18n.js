@@ -1,0 +1,181 @@
+const MESSAGES = {
+  en: {
+    popupTitle: "Time Translator",
+    targetBeijing: "Beijing time",
+    heroLine: "Online model parsing · Local timezone conversion",
+    energyLine: "元气100% · Read time zones with ease",
+    statusNotConfigured: "API key not configured",
+    statusConnected: "Connected · {{provider}}",
+    autoConvertTitle: "Automatically detect and convert after you select and release text",
+    autoConvertEnabled: "Auto-detect after selection",
+    autoConvertDisabled: "Manual detection only",
+    themeToDark: "Switch to dark mode",
+    themeToLight: "Switch to light mode",
+    modelConnection: "Model connection",
+    provider: "Provider",
+    model: "Model",
+    modelPlaceholder: "e.g. qwen-plus",
+    apiKey: "API key",
+    apiKeyPlaceholder: "Stored only in this browser",
+    showApiKey: "Show API key",
+    hideApiKey: "Hide API key",
+    endpoint: "Endpoint",
+    endpointPlaceholder: "https://.../chat/completions",
+    modelListHint: "Enter an API key to refresh the model list.",
+    privacyNote: "Requests are sent to your selected model provider only when converting text or refreshing models. The full page is never sent. Your API key stays in this browser.",
+    onlineTest: "Online test",
+    onlineTestNote: "Sent to the current model",
+    testInputAria: "English time expression to test",
+    run: "Run",
+    testReady: "Enter an API key to run a test.",
+    testRequesting: "Requesting model…",
+    testUnknown: "Could not determine the time",
+    modelRefresh: "Refresh available models",
+    modelLoading: "Reading the current model list…",
+    modelFound: "Found {{count}} models. Choose one or keep typing.",
+    modelRefreshRequired: "Enter an API key and endpoint first.",
+    conversionPreferences: "Conversion preferences",
+    targetTimezone: "Target timezone",
+    defaultSourceTimezone: "Assume timezone when omitted",
+    timezoneBeijing: "Beijing time · Asia/Shanghai",
+    timezoneJapan: "Japan time · Asia/Tokyo",
+    timezoneUK: "UK time · Europe/London",
+    timezoneUSEastern: "US Eastern · America/New_York",
+    timezoneUTC: "UTC",
+    sourceUK: "UK · Europe/London",
+    sourceUSEastern: "US Eastern · America/New_York",
+    sourceUSPacific: "US Pacific · America/Los_Angeles",
+    sourceJapan: "Japan · Asia/Tokyo",
+    customKeywords: "Custom triggers",
+    customKeywordsPlaceholder: "One word or phrase per line, e.g. EOD\nrelease window",
+    customKeywordsNote: "One word or phrase per line; commas and semicolons also work.",
+    saveDefault: "Changes save automatically",
+    saving: "Saving…",
+    saved: "Saved",
+    saveFailed: "Save failed",
+    footerKey: "API key stays in this browser",
+    feedback: "Feedback",
+    feedbackAria: "Send feedback email",
+    provider_deepseek: "DeepSeek",
+    provider_mimo: "Xiaomi MiMo",
+    provider_qwen: "Qwen / Alibaba Cloud",
+    provider_zhipu: "Zhipu GLM",
+    provider_moonshot: "Moonshot / Kimi",
+    provider_doubao: "Volcengine / Doubao",
+    provider_openai: "OpenAI-compatible / OpenAI",
+    provider_custom: "Custom compatible API",
+    hint_deepseek: "OpenAI-compatible API; disable thinking for lower latency on short requests.",
+    hint_mimo: "OpenAI-compatible API; use the model name currently available in the MiMo console.",
+    hint_qwen: "You can replace this with a workspace-specific endpoint.",
+    hint_zhipu: "Use an API key from the Zhipu open platform.",
+    hint_moonshot: "Kimi Open Platform's OpenAI-compatible API.",
+    hint_doubao: "Replace the model with the Endpoint ID you created in Ark.",
+    hint_openai: "You can also use any compatible Chat Completions service.",
+    hint_custom: "The endpoint must support POST /chat/completions.",
+  },
+  zh: {
+    popupTitle: "Time Translator · 元气100%",
+    targetBeijing: "北京时间",
+    heroLine: "在线模型解析 · 本地时区换算",
+    energyLine: "元气100% · 轻松读懂时区",
+    statusNotConfigured: "未配置 API Key",
+    statusConnected: "已连接 · {{provider}}",
+    autoConvertTitle: "控制选中并释放鼠标后是否自动检测并转换",
+    autoConvertEnabled: "选中后自动检测并转换",
+    autoConvertDisabled: "仅右键手动检测",
+    themeToDark: "切换到夜间模式",
+    themeToLight: "切换到日间模式",
+    modelConnection: "模型连接",
+    provider: "服务商",
+    model: "模型名",
+    modelPlaceholder: "例如 qwen-plus",
+    apiKey: "API Key",
+    apiKeyPlaceholder: "只保存在本机扩展存储",
+    showApiKey: "显示 API Key",
+    hideApiKey: "隐藏 API Key",
+    endpoint: "Endpoint",
+    endpointPlaceholder: "https://.../chat/completions",
+    modelListHint: "填好 API Key 后可刷新当前服务商的模型列表。",
+    privacyNote: "仅在发起转换或刷新模型列表时，必要的请求会发送到你选择的模型服务商；不会发送整页内容。API Key 只保存在本机扩展存储。",
+    onlineTest: "在线测试",
+    onlineTestNote: "发送给当前模型",
+    testInputAria: "测试英文时间表达",
+    run: "运行",
+    testReady: "填写 API Key 后运行测试。",
+    testRequesting: "正在请求模型…",
+    testUnknown: "无法确定时间",
+    modelRefresh: "刷新可用模型",
+    modelLoading: "正在读取当前服务商的模型列表…",
+    modelFound: "已找到 {{count}} 个模型，可直接选择或继续手动填写。",
+    modelRefreshRequired: "填好 API Key 和 Endpoint 后再刷新。",
+    conversionPreferences: "转换偏好",
+    targetTimezone: "目标时区",
+    defaultSourceTimezone: "未写时区时按",
+    timezoneBeijing: "北京时间 · Asia/Shanghai",
+    timezoneJapan: "日本时间 · Asia/Tokyo",
+    timezoneUK: "英国时间 · Europe/London",
+    timezoneUSEastern: "美国东部 · America/New_York",
+    timezoneUTC: "UTC",
+    sourceUK: "英国 · Europe/London",
+    sourceUSEastern: "美国东部 · America/New_York",
+    sourceUSPacific: "美国太平洋 · America/Los_Angeles",
+    sourceJapan: "日本 · Asia/Tokyo",
+    customKeywords: "自定义触发词",
+    customKeywordsPlaceholder: "每个词或短语一行，例如：EOD\nrelease window",
+    customKeywordsNote: "每个词或短语一行，也支持逗号或分号。",
+    saveDefault: "输入后自动保存",
+    saving: "保存中…",
+    saved: "已自动保存",
+    saveFailed: "保存失败",
+    footerKey: "API Key 仅保存在此浏览器",
+    feedback: "反馈",
+    feedbackAria: "发送反馈邮件",
+    provider_deepseek: "DeepSeek",
+    provider_mimo: "小米 MiMo",
+    provider_qwen: "通义千问 / 阿里云百炼",
+    provider_zhipu: "智谱 GLM",
+    provider_moonshot: "月之暗面 / Kimi",
+    provider_doubao: "火山方舟 / 豆包",
+    provider_openai: "OpenAI-compatible / OpenAI",
+    provider_custom: "自定义兼容接口",
+    hint_deepseek: "OpenAI 兼容接口；短文本解析建议关闭思考模式以降低延迟。",
+    hint_mimo: "OpenAI 兼容接口；模型名以 MiMo 控制台当前可用列表为准。",
+    hint_qwen: "可替换为你的业务空间专属 Endpoint。",
+    hint_zhipu: "使用智谱开放平台 API Key。",
+    hint_moonshot: "Kimi Open Platform 的 OpenAI-compatible 接口。",
+    hint_doubao: "把模型改成你在方舟创建的 Endpoint ID。",
+    hint_openai: "也可以改成任何兼容 Chat Completions 的服务。",
+    hint_custom: "接口需要兼容 POST /chat/completions。",
+  },
+};
+
+export function getUiLocale() {
+  const language = globalThis.chrome?.i18n?.getUILanguage?.() || globalThis.navigator?.language || "en";
+  return /^zh(?:[-_]|$)/i.test(language) ? "zh" : "en";
+}
+
+export function getMessage(key, substitutions = {}) {
+  const locale = getUiLocale();
+  const template = MESSAGES[locale]?.[key] || MESSAGES.en[key] || key;
+  return template.replace(/\{\{(\w+)\}\}/g, (_match, name) => String(substitutions[name] ?? ""));
+}
+
+export function applyI18n(root = globalThis.document) {
+  if (!root) return;
+  const locale = getUiLocale();
+  root.documentElement.lang = locale === "zh" ? "zh-CN" : "en";
+  for (const element of root.querySelectorAll("[data-i18n]")) {
+    element.textContent = getMessage(element.dataset.i18n);
+  }
+  for (const element of root.querySelectorAll("[data-i18n-placeholder]")) {
+    element.placeholder = getMessage(element.dataset.i18nPlaceholder);
+  }
+  for (const element of root.querySelectorAll("[data-i18n-title]")) {
+    element.title = getMessage(element.dataset.i18nTitle);
+  }
+  for (const element of root.querySelectorAll("[data-i18n-aria-label]")) {
+    element.setAttribute("aria-label", getMessage(element.dataset.i18nAriaLabel));
+  }
+}
+
+export { MESSAGES };
