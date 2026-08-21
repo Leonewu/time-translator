@@ -244,6 +244,7 @@ function tooltipStyles() {
     .details-row + .details-row { margin-top: 4px; }
     .details-label { color: #9aa2af; flex: 0 0 auto; }
     .details-value { color: #303641; text-align: right; word-break: break-word; }
+    .reference-note { color: #8d96a3; font-size: 8px; line-height: 1.2; margin-top: 4px; text-align: right; }
     .assumption { color: #8a6500; margin-top: 7px; }
     .error { color: #d94b3f; font-size: 10px; line-height: 1.35; margin-top: 6px; }
     .error-actions { display: flex; gap: 3px; justify-content: flex-end; margin-top: 3px; }
@@ -304,12 +305,15 @@ function renderResult(result, text, rect) {
   const source = escapeHtml(sourceZone);
   const relationLabels = { before: "不晚于", by: "截止", after: "之后", at: "时间点", between: "时间范围", from: "时间范围" };
   const assumptions = (result.assumptions || []).map((item) => `<div>· ${escapeHtml(item)}</div>`).join("");
+  const referenceNote = result.referenceContext?.kind === "gmail_message" && result.referenceContext.relative
+    ? `<div class="reference-note">参考邮件日期${result.referenceContext.dateText ? `：${escapeHtml(result.referenceContext.dateText)}` : ""}</div>`
+    : "";
   const details = detailsOpen ? `<div class="details">
       <div class="details-row"><span class="details-label">源时区</span><span class="details-value">${source}</span></div>
       <div class="details-row"><span class="details-label">语义</span><span class="details-value">${escapeHtml(relationLabels[result.relation] || result.relation || "时间转换")}</span></div>
       <div class="details-row"><span class="details-label">解析</span><span class="details-value">${escapeHtml(result.engine || "在线模型")}</span></div>
       <div class="details-row"><span class="details-label">目标</span><span class="details-value">${escapeHtml(targetZone)}</span></div>
-      ${result.referenceContext?.kind === "gmail_message" ? `<div class="details-row"><span class="details-label">参考</span><span class="details-value">Gmail 邮件时间</span></div>` : ""}
+      ${result.referenceContext?.kind === "gmail_message" && result.referenceContext.relative ? `<div class="details-row"><span class="details-label">参考</span><span class="details-value">邮件日期${result.referenceContext.dateText ? ` · ${escapeHtml(result.referenceContext.dateText)}` : ""}</span></div>` : ""}
       ${assumptions ? `<div class="assumption">${assumptions}</div>` : ""}
       ${result.error ? `<div class="error">${escapeHtml(result.error)}</div>` : ""}
     </div>` : "";
@@ -326,6 +330,7 @@ function renderResult(result, text, rect) {
           <div class="zone">${escapeHtml(targetZone)}</div>
         </div>
       </div>
+      ${referenceNote}
       <div class="toolbar">
         <button class="copy" aria-label="复制北京时间" title="复制北京时间" data-action="copy" data-copy="${escapeHtml(result.displayText)}">${icon("copy")}</button>
         <button class="refresh" aria-label="重新解析" title="重新解析" data-action="refresh">${icon("refresh")}</button>

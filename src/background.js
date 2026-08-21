@@ -22,6 +22,28 @@ function hasRelativeDateExpression(text) {
   return /\b(?:today|yesterday|tomorrow|this|next)\b/i.test(String(text || ""));
 }
 
+function formatReferenceDate(reference, sourceTimeZone, sourceOffsetMinutes) {
+  const offset = Number.isInteger(sourceOffsetMinutes) ? sourceOffsetMinutes : null;
+  if (offset !== null) {
+    const shifted = new Date(reference.getTime() + offset * 60 * 1000);
+    return `${shifted.getUTCFullYear()}/${String(shifted.getUTCMonth() + 1).padStart(2, "0")}/${String(shifted.getUTCDate()).padStart(2, "0")}`;
+  }
+
+  try {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: sourceTimeZone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(reference);
+    const values = Object.fromEntries(parts.filter((part) => part.type !== "literal").map((part) => [part.type, part.value]));
+    if (values.year && values.month && values.day) return `${values.year}/${values.month}/${values.day}`;
+  } catch {
+    // Fall through to a neutral label if an unexpected zone reaches the UI.
+  }
+  return "";
+}
+
 async function resolveText(text, settings, { includeNormalization = false, referenceContext = null } = {}) {
   const context = normalizeReferenceContext(referenceContext);
   if (context?.kind === "gmail_message_unresolved" && hasRelativeDateExpression(text)) {
@@ -58,12 +80,22 @@ async function resolveText(text, settings, { includeNormalization = false, refer
       targetTimeZone: settings.targetTimeZone,
       rawText: text,
     });
+    const relativeReference = context?.kind === "gmail_message" && hasRelativeDateExpression(text);
+    const resultContext = context
+      ? {
+          ...context,
+          relative: relativeReference,
+          ...(relativeReference && resolved.ok
+            ? { dateText: formatReferenceDate(reference, resolved.sourceTimeZone, resolved.sourceOffsetMinutes) }
+            : {}),
+        }
+      : null;
     const result = {
       ...resolved,
-      ...(context ? { referenceContext: context } : {}),
+      ...(resultContext ? { referenceContext: resultContext } : {}),
       engine: `在线模型 · ${settings.llm.provider}`,
     };
-    if (context && result.ok) {
+    if (relativeReference && result.ok) {
       result.assumptions = [...(result.assumptions || []), "相对日期按 Gmail 邮件时间计算"];
     }
     return includeNormalization ? { ...result, llmNormalization: extraction } : result;
