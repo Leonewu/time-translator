@@ -19,6 +19,20 @@ test("API Key 失焦时立即落盘，避免 Popup 测试成功但选区转换�
   assert.match(popupJs, /if \(delay === 0\) \{[\s\S]*void persistForm\(\)/);
 });
 
+test("API Key 提供眼睛按钮切换显示和隐藏", () => {
+  assert.match(popupHtml, /id="apiKey" type="password"/);
+  assert.match(popupHtml, /id="toggleApiKey"[^>]+aria-label="显示 API Key"/);
+  assert.match(popupJs, /const toggleApiKey = document\.querySelector\("#toggleApiKey"\)/);
+  assert.match(popupJs, /apiKey\.type === "password" \? "text" : "password"/);
+  assert.match(popupJs, /toggleApiKey\.addEventListener\("click"/);
+});
+
+test("切换服务商会自动同步对应的 Endpoint 和模型名", () => {
+  assert.match(popupJs, /provider\.addEventListener\("change", \(\) => \{[\s\S]*fillProviderFields\(true\)[\s\S]*scheduleSave\(\)/);
+  assert.match(popupJs, /if \(usePreset \|\| !endpoint\.value\) endpoint\.value = preset\.endpoint/);
+  assert.match(popupJs, /if \(usePreset \|\| !model\.value\) model\.value = preset\.model/);
+});
+
 test("Popup 提供自定义关键词输入框", () => {
   assert.match(popupHtml, /id="customKeywords"/);
   assert.match(popupHtml, /自定义触发词/);

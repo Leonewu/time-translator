@@ -4,6 +4,7 @@ const provider = document.querySelector("#provider");
 const model = document.querySelector("#model");
 const endpoint = document.querySelector("#endpoint");
 const apiKey = document.querySelector("#apiKey");
+const toggleApiKey = document.querySelector("#toggleApiKey");
 const providerHint = document.querySelector("#providerHint");
 const configState = document.querySelector("#configState");
 const autoConvert = document.querySelector("#autoConvert");
@@ -56,6 +57,15 @@ function updateConfigState(value = readForm()) {
 function updatePluginState() {
   pluginState.textContent = autoConvert.checked ? "选中后自动检测并转换" : "仅右键手动检测";
   pluginState.classList.toggle("disabled", !autoConvert.checked);
+}
+
+function updateApiKeyVisibility() {
+  const visible = apiKey.type === "text";
+  const label = visible ? "隐藏 API Key" : "显示 API Key";
+  toggleApiKey.setAttribute("aria-label", label);
+  toggleApiKey.setAttribute("aria-pressed", String(visible));
+  toggleApiKey.title = label;
+  toggleApiKey.classList.toggle("is-visible", visible);
 }
 
 function writeForm(value) {
@@ -144,6 +154,11 @@ async function init() {
   autoConvert.addEventListener("change", () => {
     updatePluginState();
     scheduleSave(0);
+  });
+  toggleApiKey.addEventListener("click", () => {
+    apiKey.type = apiKey.type === "password" ? "text" : "password";
+    updateApiKeyVisibility();
+    apiKey.focus();
   });
   testButton.addEventListener("click", runTest);
   testText.addEventListener("keydown", (event) => {

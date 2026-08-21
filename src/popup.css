@@ -74,6 +74,15 @@ select, input, textarea { background: var(--panel); border: 1px solid var(--line
 select { font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 input { font-size: 11px; overflow: hidden; text-overflow: ellipsis; }
 textarea { font-size: 11px; line-height: 1.4; min-height: 54px; resize: vertical; }
+.secret-input { display: block; position: relative; }
+.secret-input input { padding-right: 36px; }
+.secret-toggle { align-items: center; background: transparent; border: 0; color: var(--muted); display: inline-flex; height: 28px; justify-content: center; padding: 0; position: absolute; right: 5px; top: 50%; transform: translateY(-50%); width: 28px; }
+.secret-toggle:hover, .secret-toggle:focus-visible { color: var(--lime); }
+.secret-toggle:focus-visible { border-radius: 5px; box-shadow: 0 0 0 2px rgba(196, 243, 106, .16); outline: none; }
+.eye-icon { display: block; height: 15px; width: 15px; }
+.eye-closed { display: none; }
+.secret-toggle.is-visible .eye-open { display: none; }
+.secret-toggle.is-visible .eye-closed { display: block; }
 input::placeholder { color: #58635f; }
 textarea::placeholder { color: #58635f; }
 select:focus, input:focus, textarea:focus { border-color: var(--lime); box-shadow: 0 0 0 2px rgba(196, 243, 106, .12); }
