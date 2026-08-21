@@ -60,7 +60,7 @@ button { cursor: pointer; }
 .switch-track span { background: var(--panel); border-radius: 50%; display: block; height: 11px; transform: translateX(0); transition: transform .18s ease; width: 11px; }
 .master-switch input:checked + .switch-track { background: var(--lime); }
 .master-switch input:checked + .switch-track span { background: var(--paper); transform: translateX(12px); }
-.master-switch input:focus-visible + .switch-track { box-shadow: 0 0 0 2px rgba(196, 243, 106, .25); }
+.master-switch input:focus-visible + .switch-track { box-shadow: 0 0 0 2px rgba(255, 189, 50, .28); }
 .master-switch #pluginState.disabled { color: var(--muted); }
 
 .section-block { border-bottom: 1px solid var(--line); padding: 18px 0 19px; }
@@ -79,7 +79,7 @@ textarea { font-size: 11px; line-height: 1.4; min-height: 54px; resize: vertical
 .secret-input input { padding-right: 36px; }
 .secret-toggle { align-items: center; background: transparent; border: 0; color: var(--muted); display: inline-flex; height: 28px; justify-content: center; padding: 0; position: absolute; right: 5px; top: 50%; transform: translateY(-50%); width: 28px; }
 .secret-toggle:hover, .secret-toggle:focus-visible { color: var(--paper); }
-.secret-toggle:focus-visible { border-radius: 5px; box-shadow: 0 0 0 2px rgba(196, 243, 106, .16); outline: none; }
+.secret-toggle:focus-visible { border-radius: 5px; box-shadow: 0 0 0 2px rgba(255, 189, 50, .22); outline: none; }
 .eye-icon { display: block; height: 15px; width: 15px; }
 .eye-closed { display: none; }
 .secret-toggle.is-visible .eye-open { display: none; }
@@ -87,14 +87,14 @@ textarea { font-size: 11px; line-height: 1.4; min-height: 54px; resize: vertical
 .secret-toggle:focus-visible { background: rgba(255, 189, 50, .12); }
 input::placeholder { color: #98aaa5; }
 textarea::placeholder { color: #98aaa5; }
-select:focus, input:focus, textarea:focus { border-color: var(--lime); box-shadow: 0 0 0 2px rgba(196, 243, 106, .12); }
+select:focus, input:focus, textarea:focus { border-color: var(--lime); box-shadow: 0 0 0 2px rgba(255, 189, 50, .16); }
 .hint { color: var(--faint); font-size: 10px; line-height: 1.45; margin: 9px 0 0; }
 .privacy-note { color: var(--faint); font-size: 9px; line-height: 1.45; margin: 8px 0 0; }
 .field-note { color: var(--faint); font-size: 9px; font-weight: 400; letter-spacing: 0; line-height: 1.35; }
 .form-actions { align-items: center; display: flex; min-height: 38px; }
 .save-status { color: var(--faint); font-size: 10px; }
-.test-button { background: var(--lime); border: 0; border-radius: 7px; color: var(--night); font-size: 11px; font-weight: 800; padding: 9px 13px; }
-.test-button:hover { background: #d4fb83; }
+.test-button { background: var(--lime); border: 0; border-radius: 7px; color: var(--paper); font-size: 11px; font-weight: 800; padding: 9px 13px; }
+.test-button:hover { background: #ffd36b; }
 
 .test-block { background: var(--panel-soft); border: 1px solid rgba(41, 54, 95, .09); border-radius: 10px; margin-top: 14px; padding: 13px; }
 .test-heading { align-items: baseline; display: flex; gap: 8px; margin-bottom: 10px; }
