@@ -14,6 +14,11 @@ test("Popup 提供插件总开关，不再提供独立保存按钮或自动弹�
   assert.doesNotMatch(popupHtml, /保存配置/);
 });
 
+test("Popup 在窄容器下保持可用宽度，避免中文逐字换行", () => {
+  assert.match(popupCss, /body \{[^}]*min-width:\s*390px/);
+  assert.doesNotMatch(popupCss, /@media \(max-width: 390px\)[\s\S]*body \{ width: 100vw; \}/);
+});
+
 test("API Key 失焦时立即落盘，避免 Popup 测试成功但选区转换读取旧配置", () => {
   assert.match(popupJs, /field\.addEventListener\("blur", \(\) => scheduleSave\(0\)\)/);
   assert.match(popupJs, /if \(delay === 0\) \{[\s\S]*void persistForm\(\)/);

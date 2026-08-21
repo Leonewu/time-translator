@@ -46,7 +46,7 @@
 }
 
 * { box-sizing: border-box; }
-body { background: var(--night); color: var(--paper); margin: 0; max-height: 620px; max-width: 100vw; overflow-x: hidden; overflow-y: auto; width: 390px; }
+body { background: var(--night); color: var(--paper); margin: 0; max-height: 620px; max-width: 390px; min-width: 390px; overflow-x: hidden; overflow-y: auto; width: 390px; }
 button, input, select, textarea { font: inherit; }
 button { cursor: pointer; }
 
@@ -150,8 +150,3 @@ select:focus, input:focus, textarea:focus { border-color: var(--lime); box-shado
 .model-status-ready { color: var(--green); }
 .model-status-loading { color: var(--paper); }
 footer { color: var(--faint); display: flex; font-size: 9px; justify-content: space-between; padding-top: 14px; }
-
-@media (max-width: 390px) {
-  body { width: 100vw; }
-  .popup-shell { padding-left: 16px; padding-right: 16px; }
-}
