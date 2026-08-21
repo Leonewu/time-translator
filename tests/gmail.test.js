@@ -54,9 +54,11 @@ test("Gmail 上下文优先取选中文字所在消息的完整时间", () => {
 });
 
 test("内容脚本把选中文字所属 Gmail 邮件的时间作为参考上下文", () => {
-  assert.match(contentSource, /TimeTranslatorGmail\?\.extractMessageContext\(range\.startContainer\)/);
+  assert.match(contentSource, /gmail\?\.extractMessageContext\(range\.startContainer\)/);
+  assert.match(contentSource, /gmail_message_unresolved/);
   assert.match(contentSource, /referenceContext: currentReferenceContext/);
   assert.match(backgroundSource, /const reference = context \? new Date\(context\.referenceInstant\) : new Date\(\)/);
+  assert.match(backgroundSource, /无法读取当前 Gmail 邮件日期/);
   assert.match(backgroundSource, /相对日期按 Gmail 邮件时间计算/);
   assert.match(manifest, /"src\/shared\/gmail\.js", "src\/content\.js"/);
 });

@@ -4,7 +4,10 @@ import { isTimeCandidate } from "./shared/candidate.js";
 import { requestOpenAICompatibleExtraction } from "./shared/llm.js";
 
 function normalizeReferenceContext(value) {
-  if (!value || value.kind !== "gmail_message") return null;
+  if (!value || !["gmail_message", "gmail_message_unresolved"].includes(value.kind)) return null;
+  if (value.kind === "gmail_message_unresolved") {
+    return { kind: value.kind, source: "gmail_page" };
+  }
   const reference = new Date(value.referenceInstant);
   if (!Number.isFinite(reference.getTime())) return null;
   return {
@@ -15,8 +18,21 @@ function normalizeReferenceContext(value) {
   };
 }
 
+function hasRelativeDateExpression(text) {
+  return /\b(?:today|yesterday|tomorrow|this|next)\b/i.test(String(text || ""));
+}
+
 async function resolveText(text, settings, { includeNormalization = false, referenceContext = null } = {}) {
   const context = normalizeReferenceContext(referenceContext);
+  if (context?.kind === "gmail_message_unresolved" && hasRelativeDateExpression(text)) {
+    return {
+      ok: false,
+      rawText: text,
+      engine: "Gmail 邮件上下文未读取",
+      reason: "无法读取当前 Gmail 邮件日期，暂不按当前日期换算；请展开邮件详情后重试",
+      referenceContext: context,
+    };
+  }
   const reference = context ? new Date(context.referenceInstant) : new Date();
   if (!settings.llm.apiKey) {
     return {

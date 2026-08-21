@@ -105,7 +105,11 @@ function getSelectionInfo() {
   if (!text || !selection?.rangeCount) return null;
   const range = selection.getRangeAt(0);
   const rect = range.getBoundingClientRect();
-  const referenceContext = globalThis.TimeTranslatorGmail?.extractMessageContext(range.startContainer) || null;
+  const gmail = globalThis.TimeTranslatorGmail;
+  const onGmail = gmail?.isGmailWebPage?.() === true;
+  const referenceContext = gmail?.extractMessageContext(range.startContainer) || (onGmail
+    ? { kind: "gmail_message_unresolved", source: "gmail_page" }
+    : null);
   return { text, rect, referenceContext };
 }
 
@@ -305,7 +309,7 @@ function renderResult(result, text, rect) {
       <div class="details-row"><span class="details-label">语义</span><span class="details-value">${escapeHtml(relationLabels[result.relation] || result.relation || "时间转换")}</span></div>
       <div class="details-row"><span class="details-label">解析</span><span class="details-value">${escapeHtml(result.engine || "在线模型")}</span></div>
       <div class="details-row"><span class="details-label">目标</span><span class="details-value">${escapeHtml(targetZone)}</span></div>
-      ${result.referenceContext ? `<div class="details-row"><span class="details-label">参考</span><span class="details-value">Gmail 邮件时间</span></div>` : ""}
+      ${result.referenceContext?.kind === "gmail_message" ? `<div class="details-row"><span class="details-label">参考</span><span class="details-value">Gmail 邮件时间</span></div>` : ""}
       ${assumptions ? `<div class="assumption">${assumptions}</div>` : ""}
       ${result.error ? `<div class="error">${escapeHtml(result.error)}</div>` : ""}
     </div>` : "";
