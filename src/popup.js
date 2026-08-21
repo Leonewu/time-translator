@@ -14,7 +14,6 @@ const modelOptions = document.querySelector("#modelOptions");
 const modelStatus = document.querySelector("#modelStatus");
 const refreshModels = document.querySelector("#refreshModels");
 const providerHint = document.querySelector("#providerHint");
-const configState = document.querySelector("#configState");
 const autoConvert = document.querySelector("#autoConvert");
 const pluginState = document.querySelector("#pluginState");
 const customKeywords = document.querySelector("#customKeywords");
@@ -55,13 +54,6 @@ function fillProviderFields(usePreset = false) {
   if (usePreset || !endpoint.value) endpoint.value = preset.endpoint;
   if (usePreset || !model.value) model.value = preset.model;
   providerHint.textContent = t(`hint_${provider.value}`);
-}
-
-function updateConfigState(value = readForm()) {
-  const configured = Boolean(value.llm.apiKey && value.llm.endpoint && value.llm.model);
-  const providerLabel = t(`provider_${value.llm.provider}`);
-  configState.textContent = configured ? t("statusConnected", { provider: providerLabel }) : t("statusNotConfigured");
-  configState.classList.toggle("ready", configured);
 }
 
 function updatePluginState() {
@@ -135,7 +127,6 @@ function writeForm(value) {
   endpoint.value = value.llm.endpoint;
   apiKey.value = value.llm.apiKey;
   fillProviderFields();
-  updateConfigState(value);
   updatePluginState();
   updateApiKeyVisibility();
 }
@@ -154,7 +145,6 @@ async function persistForm() {
 }
 
 function scheduleSave(delay = 350) {
-  updateConfigState();
   saveStatus.textContent = t("saving");
   clearTimeout(saveTimer);
   if (delay === 0) {

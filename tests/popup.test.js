@@ -21,6 +21,26 @@ test("Popup 在窄容器下保持可用宽度，避免中文逐字换行", () =>
   assert.doesNotMatch(popupCss, /@media \(max-width: 390px\)[\s\S]*body \{ width: 100vw; \}/);
 });
 
+test("转换偏好的两列标签使用统一高度，避免英文长标签造成控件错位", () => {
+  assert.match(popupCss, /\.compact-block \.field-grid \.field-label \{[^}]*min-height:\s*2\.4em/);
+});
+
+test("自动检测开关的圆点不会越过轨道边界", () => {
+  assert.match(popupCss, /\.switch-track \{[^}]*overflow:\s*hidden/);
+  assert.match(popupCss, /\.master-switch input:checked \+ \.switch-track span \{[^}]*transform:\s*translateX\(10px\)/);
+});
+
+test("Popup 不再显示服务商连接状态文案", () => {
+  assert.doesNotMatch(popupHtml, /id="configState"/);
+  assert.doesNotMatch(popupJs, /updateConfigState/);
+});
+
+test("主滚动条使用与日夜主题一致的轻量样式", () => {
+  assert.match(popupCss, /scrollbar-color:\s*var\(--scroll-thumb\)/);
+  assert.match(popupCss, /body::-webkit-scrollbar-thumb/);
+  assert.match(popupCss, /:root\[data-theme="dark"\][\s\S]*--scroll-thumb:/);
+});
+
 test("API Key 失焦时立即落盘，避免 Popup 测试成功但选区转换读取旧配置", () => {
   assert.match(popupJs, /field\.addEventListener\("blur", \(\) => scheduleSave\(0\)\)/);
   assert.match(popupJs, /if \(delay === 0\) \{[\s\S]*void persistForm\(\)/);
