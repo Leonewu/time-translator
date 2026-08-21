@@ -7,6 +7,12 @@ test("插件开关默认开启，并能从设置中持久化关闭状态", () =>
   assert.equal(mergeSettings({ autoConvert: false }).autoConvert, false);
 });
 
+test("面板主题默认为日间模式，并能持久化夜间模式", () => {
+  assert.equal(mergeSettings().theme, "light");
+  assert.equal(mergeSettings({ theme: "dark" }).theme, "dark");
+  assert.equal(mergeSettings({ theme: "unknown" }).theme, "light");
+});
+
 test("旧的自动弹出和 LLM 启用字段不会继续成为配置项", () => {
   const settings = mergeSettings({ enabled: false, showAutomatically: true, llm: { enabled: true } });
   assert.equal(settings.autoConvert, false);

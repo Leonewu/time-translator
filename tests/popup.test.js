@@ -27,6 +27,24 @@ test("API Key 提供眼睛按钮切换显示和隐藏", () => {
   assert.match(popupJs, /toggleApiKey\.addEventListener\("click"/);
 });
 
+test("Popup 提供可持久化的日间/夜间模式切换", () => {
+  assert.match(popupHtml, /data-theme="light"/);
+  assert.match(popupHtml, /id="themeToggle"/);
+  assert.match(popupHtml, /切换到夜间模式/);
+  assert.match(popupJs, /document\.documentElement\.dataset\.theme/);
+  assert.match(popupJs, /themeToggle\.addEventListener\("click"/);
+  assert.match(popupCss, /:root\[data-theme="dark"\]/);
+});
+
+test("模型名支持动态候选列表并提供刷新入口", () => {
+  assert.match(popupHtml, /id="model" list="modelOptions"/);
+  assert.match(popupHtml, /id="modelOptions"/);
+  assert.match(popupHtml, /id="refreshModels"/);
+  assert.match(popupJs, /listAvailableModels/);
+  assert.match(popupJs, /refreshModels\.addEventListener\("click"/);
+  assert.match(popupJs, /provider\.addEventListener\("change",[\s\S]*refreshModelOptions/);
+});
+
 test("切换服务商会自动同步对应的 Endpoint 和模型名", () => {
   assert.match(popupJs, /provider\.addEventListener\("change", \(\) => \{[\s\S]*fillProviderFields\(true\)[\s\S]*scheduleSave\(\)/);
   assert.match(popupJs, /if \(usePreset \|\| !endpoint\.value\) endpoint\.value = preset\.endpoint/);
@@ -42,7 +60,7 @@ test("Popup 提供自定义关键词输入框", () => {
 });
 
 test("Popup 明确在线模型只接收选中文本", () => {
-  assert.match(popupHtml, /选中的文本会直接发送到你选择的模型服务商/);
+  assert.match(popupHtml, /发起转换或刷新模型列表时，必要的请求会发送到你选择的模型服务商/);
   assert.match(popupHtml, /不会发送整页内容/);
 });
 

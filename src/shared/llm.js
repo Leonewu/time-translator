@@ -137,6 +137,56 @@ function assertSecureEndpoint(endpoint) {
   if (url.protocol !== "https:") throw new Error("模型 Endpoint 必须使用 HTTPS");
 }
 
+export function getModelListEndpoint(endpoint) {
+  const url = new URL(endpoint);
+  const path = url.pathname.replace(/\/+$/, "");
+  if (path.endsWith("/models")) {
+    url.pathname = path;
+  } else if (path.endsWith("/chat/completions")) {
+    url.pathname = `${path.slice(0, -"/chat/completions".length)}/models`;
+  } else if (path.endsWith("/completions")) {
+    url.pathname = `${path.slice(0, -"/completions".length)}/models`;
+  } else {
+    url.pathname = `${path}/models`;
+  }
+  url.search = "";
+  url.hash = "";
+  return url.toString();
+}
+
+function authHeaders(config) {
+  if (config.provider === "mimo") return { "api-key": config.apiKey };
+  return { Authorization: `Bearer ${config.apiKey}` };
+}
+
+export async function listAvailableModels({ config, timeoutMs = 8000 }) {
+  if (!config?.endpoint || !config?.apiKey) throw new Error("请先填写 API Key 和 Endpoint");
+  assertSecureEndpoint(config.endpoint);
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(getModelListEndpoint(config.endpoint), {
+      method: "GET",
+      headers: { Accept: "application/json", ...authHeaders(config) },
+      signal: controller.signal,
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(payload?.error?.message || payload?.message || `获取模型列表失败（${response.status}）`);
+    }
+    const items = Array.isArray(payload?.data) ? payload.data : Array.isArray(payload?.models) ? payload.models : [];
+    const models = [...new Set(items.map((item) => (typeof item === "string" ? item : item?.id)).filter(Boolean))];
+    if (!models.length) throw new Error("服务商没有返回可用模型");
+    return models;
+  } catch (error) {
+    if (error.name === "AbortError") throw new Error("获取模型列表超时");
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export async function requestOpenAICompatibleExtraction({
   config,
   text,
@@ -174,4 +224,4 @@ export async function requestOpenAICompatibleExtraction({
   }
 }
 
-export const llmInternals = { extractContent, requestBody };
+export const llmInternals = { extractContent, requestBody, authHeaders };

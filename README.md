@@ -6,6 +6,7 @@
 
 ## 当前版本
 
+- Popup 支持日间/夜间模式，偏好会自动保存
 - 插件 Popup 内可开关“选中后自动检测并转换”；关闭后只保留右键菜单手动检测
 - 默认目标时区 `Asia/Shanghai`
 - Popup 可添加自定义触发词或短语，匹配不区分大小写
@@ -13,6 +14,7 @@
 - 处理 `today / tomorrow / next Monday`、12/24 小时制、`before / by / after / between`
 - 使用 IANA 时区规则自动处理英国、美国等地区的夏令时和冬令时
 - 支持在线 LLM 解析：DeepSeek、小米 MiMo、通义千问、智谱 GLM、Kimi、豆包、OpenAI-compatible 自定义接口
+- 模型名支持点击刷新，从当前服务商的 `/models` 接口读取动态候选；接口不支持时仍可手动填写
 - 插件 Popup 内包含模型配置、转换偏好和在线测试
 
 ## 本地开发
@@ -41,9 +43,9 @@ python3 -m http.server 8788
 
 ## 配置在线模型
 
-点击扩展图标，在 Popup 内选择服务商、填写模型和 API Key；输入和选项会自动保存。
+点击扩展图标，在 Popup 内选择服务商、填写 API Key；模型名可以手动填写，也可以点击旁边的刷新按钮从服务商动态读取。输入和选项会自动保存。
 
-在线模型 Endpoint 必须使用 HTTPS。选中文本只在发起转换时发送到用户选择的模型服务商，不发送整页内容。
+在线模型 Endpoint 必须使用 HTTPS。选中文本只在发起转换时发送到用户选择的模型服务商，不发送整页内容。刷新模型列表时，会向当前 Endpoint 推导出的 `/models` 地址发送带 API Key 的请求，不会发送选中的网页文本。
 
 隐私政策见 [`privacy-policy.html`](./privacy-policy.html)。
 

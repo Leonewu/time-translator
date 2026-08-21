@@ -1,5 +1,6 @@
 export const DEFAULT_SETTINGS = {
   autoConvert: true,
+  theme: "light",
   customKeywords: [],
   targetTimeZone: "Asia/Shanghai",
   defaultSourceTimeZone: "Europe/London",
@@ -85,6 +86,7 @@ function mergeSettings(saved = {}) {
     ...DEFAULT_SETTINGS,
     ...savedWithoutLegacyEnabled,
     autoConvert: saved.autoConvert ?? legacyAutoConvert ?? DEFAULT_SETTINGS.autoConvert,
+    theme: saved.theme === "dark" ? "dark" : DEFAULT_SETTINGS.theme,
     customKeywords: normalizeCustomKeywords(saved.customKeywords),
     llm: {
       ...DEFAULT_SETTINGS.llm,

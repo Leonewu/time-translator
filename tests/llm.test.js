@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { parseStructuredTimeExpression } from "../src/shared/parser.js";
-import { parseJsonObject, requestOpenAICompatibleExtraction } from "../src/shared/llm.js";
+import { getModelListEndpoint, listAvailableModels, parseJsonObject, requestOpenAICompatibleExtraction } from "../src/shared/llm.js";
 
 test("从 markdown 包裹的 JSON 中提取结构化结果", () => {
   assert.deepEqual(parseJsonObject('```json\n{"relation":"before"}\n```'), {
@@ -313,6 +313,36 @@ test("在线模型 Endpoint 必须使用 HTTPS", async () => {
     }),
     /必须使用 HTTPS/,
   );
+});
+
+test("动态模型列表会从 Chat Completions Endpoint 推导 /models", () => {
+  assert.equal(getModelListEndpoint("https://api.deepseek.com/chat/completions"), "https://api.deepseek.com/models");
+  assert.equal(getModelListEndpoint("https://api.xiaomimimo.com/v1/chat/completions"), "https://api.xiaomimimo.com/v1/models");
+  assert.equal(getModelListEndpoint("https://example.test/v1/models?cached=true"), "https://example.test/v1/models");
+});
+
+test("动态模型列表读取 data.id，并按服务商使用对应 API Key 请求头", async () => {
+  const originalFetch = globalThis.fetch;
+  let request;
+  globalThis.fetch = async (url, init) => {
+    request = { url, headers: init.headers };
+    return new Response(JSON.stringify({ data: [{ id: "mimo-v2.5" }, { id: "mimo-v2.5" }, { id: "mimo-lite" }] }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+  };
+
+  try {
+    const models = await listAvailableModels({
+      config: { provider: "mimo", endpoint: "https://api.xiaomimimo.com/v1/chat/completions", apiKey: "mimo-key" },
+    });
+    assert.deepEqual(models, ["mimo-v2.5", "mimo-lite"]);
+    assert.equal(request.url, "https://api.xiaomimimo.com/v1/models");
+    assert.equal(request.headers["api-key"], "mimo-key");
+    assert.equal(request.headers.Authorization, undefined);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
 test("DeepSeek 关闭思考模式，MiMo 使用 api-key 请求头", async () => {
