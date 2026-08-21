@@ -149,4 +149,6 @@ select:focus, input:focus, textarea:focus { border-color: var(--lime); box-shado
 .model-status-error { color: var(--orange); }
 .model-status-ready { color: var(--green); }
 .model-status-loading { color: var(--paper); }
-footer { color: var(--faint); display: flex; font-size: 9px; justify-content: space-between; padding-top: 14px; }
+footer { align-items: center; color: var(--faint); display: flex; font-size: 9px; gap: 10px; justify-content: space-between; padding-top: 14px; }
+.feedback-link { color: var(--green); text-decoration: none; }
+.feedback-link:hover, .feedback-link:focus-visible { color: var(--lime); text-decoration: underline; }

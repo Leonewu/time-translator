@@ -44,6 +44,10 @@ Time Translator 是一个 Chrome / Edge Manifest V3 浏览器插件。选中网�
 
 只向你选择的模型服务商发送主动选中的文本，不发送整页内容。API Key 和个人偏好保存在本机浏览器扩展存储中，项目本身不经过自建中转服务器。
 
+### 直接反馈
+
+Popup 底部提供 Feedback 入口，可以直接联系 `reon.hypr@gmail.com` 提交问题、建议或使用体验。
+
 ## 当前支持的检测语言
 
 ### 正式支持：英文
@@ -69,6 +73,7 @@ Time Translator 是一个 Chrome / Edge Manifest V3 浏览器插件。选中网�
 
 ## 当前版本
 
+- `0.1.4`
 - Popup 支持日间/夜间模式，偏好会自动保存
 - 当前 IP Logo 会以低透明度水印嵌入 Popup 背景，随日间/夜间模式调整
 - 默认目标时区 `Asia/Shanghai`

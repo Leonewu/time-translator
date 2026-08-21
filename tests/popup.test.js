@@ -59,9 +59,17 @@ test("切换服务商会自动同步对应的 Endpoint 和模型名", () => {
 test("Popup 提供自定义关键词输入框", () => {
   assert.match(popupHtml, /id="customKeywords"/);
   assert.match(popupHtml, /自定义触发词/);
+  assert.match(popupHtml, /触发词只决定是否发起检测，不会补全时间/);
   assert.match(popupJs, /customKeywords/);
   assert.match(popupJs, /customKeywords\.addEventListener\("input", \(\) => scheduleSave\(0\)\)/);
   assert.match(popupJs, /createSettingsSaver/);
+});
+
+test("Popup 提供反馈邮件入口和当前版本号", () => {
+  assert.match(popupHtml, /mailto:reon\.hypr@gmail\.com\?subject=Time%20Translator%20Feedback/);
+  assert.match(popupHtml, />反馈<\/a>/);
+  assert.match(popupHtml, />v0\.1\.4<\/span>/);
+  assert.match(manifest, /"version": "0\.1\.4"/);
 });
 
 test("Popup 明确在线模型只接收选中文本", () => {

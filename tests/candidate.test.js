@@ -36,6 +36,7 @@ test("自动识别 ISO 8601 / RFC3339 日期时间", () => {
 test("支持设置自定义关键词或短语作为自动候选触发条件", () => {
   assert.equal(isTimeCandidate("EOD Friday", { customKeywords: ["EOD"] }), true);
   assert.equal(isTimeCandidate("please confirm the release window", { customKeywords: ["release window"] }), true);
+  assert.equal(isTimeCandidate("today before 3 pm UK", { customKeywords: ["today before"] }), true);
   assert.equal(isTimeCandidate("Select a phrase", { customKeywords: " select " }), true);
   assert.equal(isTimeCandidate("EOD Friday"), false);
   assert.equal(isTimeCandidate("https://example.com/EOD", { customKeywords: ["EOD"] }), false);
