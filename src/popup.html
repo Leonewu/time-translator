@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Time Translator · 元气100%</title>
+    <link rel="stylesheet" href="./popup.css" />
+  </head>
+  <body>
+    <main class="popup-shell">
+      <header class="topbar">
+        <div>
+          <div class="eyebrow"><img class="brand-logo" src="./assets/time-cloud.png" alt="" aria-hidden="true" /><span>TIME TRANSLATOR</span></div>
+          <h1 class="brand-title">Time Translator</h1>
+        </div>
+        <div class="target-mark">北京时间<br /><strong>UTC+8</strong></div>
+      </header>
+
+      <section class="hero-line">
+        <div class="hero-copy">
+          <p>在线模型解析 · 本地时区换算</p>
+          <span class="energy-line">元气100% · 轻松读懂时区</span>
+        </div>
+        <div class="hero-meta">
+          <span id="configState" class="config-state">未配置</span>
+          <label class="master-switch" title="控制选中并释放鼠标后是否自动检测并转换">
+            <input id="autoConvert" type="checkbox" />
+            <span class="switch-track"><span></span></span>
+            <span id="pluginState">选中后自动检测并转换</span>
+          </label>
+        </div>
+      </section>
+
+      <div id="config-form" class="config-form">
+        <section class="section-block">
+          <div class="section-heading"><span>01</span><strong>模型连接</strong></div>
+          <div class="field-grid">
+            <label>服务商
+              <select id="provider"></select>
+            </label>
+            <label>模型名
+              <input id="model" placeholder="例如 qwen-plus" />
+            </label>
+          </div>
+          <label>API Key
+            <input id="apiKey" type="password" autocomplete="off" placeholder="只保存在本机扩展存储" />
+          </label>
+          <label>Endpoint
+            <input id="endpoint" type="url" placeholder="https://.../chat/completions" />
+          </label>
+          <p id="providerHint" class="hint"></p>
+          <p class="privacy-note">仅在发起转换时，选中的文本会直接发送到你选择的模型服务商；不会发送整页内容。API Key 只保存在本机扩展存储。</p>
+          <div class="test-block inline-test">
+            <div class="test-heading"><strong>在线测试</strong><em>发送给当前模型</em></div>
+            <div class="test-input-row">
+              <input id="testText" value="today before 3 pm UK" aria-label="测试英文时间表达" />
+              <button type="button" id="testLlm" class="test-button">运行</button>
+            </div>
+            <div id="testResult" class="test-result muted">填写 API Key 后运行测试。</div>
+            <pre id="testJson" class="test-json" hidden></pre>
+          </div>
+        </section>
+
+        <section class="section-block compact-block">
+          <div class="section-heading"><span>02</span><strong>转换偏好</strong></div>
+          <div class="field-grid">
+            <label>目标时区
+              <select id="targetTimeZone">
+                <option value="Asia/Shanghai">北京时间 · Asia/Shanghai</option>
+                <option value="Asia/Tokyo">日本时间 · Asia/Tokyo</option>
+                <option value="Europe/London">英国时间 · Europe/London</option>
+                <option value="America/New_York">美国东部 · America/New_York</option>
+                <option value="UTC">UTC</option>
+              </select>
+            </label>
+            <label>未写时区时按
+              <select id="defaultSourceTimeZone">
+                <option value="Europe/London">英国 · Europe/London</option>
+                <option value="America/New_York">美国东部 · America/New_York</option>
+                <option value="America/Los_Angeles">美国太平洋 · America/Los_Angeles</option>
+                <option value="Asia/Tokyo">日本 · Asia/Tokyo</option>
+                <option value="UTC">UTC</option>
+              </select>
+            </label>
+          </div>
+          <label>自定义触发词
+            <textarea id="customKeywords" rows="3" placeholder="每行一个，例如：EOD&#10;release window"></textarea>
+            <span class="field-note">每行一个，也支持逗号或分号；空格会保留为短语，匹配不区分大小写。</span>
+          </label>
+        </section>
+
+        <div class="form-actions"><span id="saveStatus" class="save-status" role="status">输入后自动保存</span></div>
+      </div>
+
+      <footer>
+        <span>API Key 仅保存在此浏览器</span>
+        <span>v0.1.1</span>
+      </footer>
+    </main>
+    <script type="module" src="./popup.js"></script>
+  </body>
+</html>

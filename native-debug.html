@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Chrome 原生模型 · 选中文本检测调试</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #151820;
+        --muted: #687180;
+        --blue: #2d5cff;
+        --blue-soft: #eef2ff;
+        --green: #176b50;
+        --green-soft: #e9f7f0;
+        --red: #b43d35;
+        --red-soft: #fff0ee;
+        --paper: #f7f8fb;
+        --card: #ffffff;
+        font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+      * { box-sizing: border-box; }
+      body { background: var(--paper); color: var(--ink); margin: 0; }
+      main { margin: 0 auto; max-width: 960px; padding: 42px 24px 72px; }
+      .kicker { color: var(--blue); font-size: 11px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; }
+      h1 { font-size: clamp(34px, 7vw, 66px); letter-spacing: -.075em; line-height: .92; margin: 14px 0 16px; max-width: 760px; }
+      h1 em { color: var(--blue); font-style: normal; }
+      .lede { color: var(--muted); font-size: 15px; line-height: 1.65; margin: 0; max-width: 720px; }
+      .toolbar { align-items: center; display: flex; flex-wrap: wrap; gap: 9px; margin-top: 26px; }
+      button { background: var(--blue); border: 0; border-radius: 10px; color: white; cursor: pointer; font: 750 13px inherit; padding: 11px 15px; }
+      button.secondary { background: var(--blue-soft); color: var(--blue); }
+      button:disabled { cursor: wait; opacity: .55; }
+      .status { color: var(--muted); font-size: 12px; margin-left: 4px; }
+      .grid { display: grid; gap: 14px; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); margin-top: 24px; }
+      .panel { background: var(--card); border: 1px solid #e5e8ee; border-radius: 18px; box-shadow: 0 10px 30px rgba(26, 32, 44, .06); padding: 18px; }
+      .panel h2 { font-size: 12px; letter-spacing: .08em; margin: 0 0 12px; text-transform: uppercase; }
+      .facts { display: grid; gap: 9px; }
+      .fact { align-items: baseline; border-bottom: 1px solid #edf0f4; display: flex; gap: 12px; justify-content: space-between; padding-bottom: 9px; }
+      .fact:last-child { border-bottom: 0; padding-bottom: 0; }
+      .fact span { color: var(--muted); font-size: 12px; }
+      .fact strong { font-size: 13px; text-align: right; }
+      .unknown { color: var(--red); }
+      .ready { color: var(--green); }
+      pre { background: #11151d; border-radius: 12px; color: #dce5ff; font: 12px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace; margin: 0; min-height: 220px; overflow: auto; padding: 14px; white-space: pre-wrap; }
+      .samples { display: grid; gap: 10px; grid-column: 1 / -1; }
+      .sample { align-items: center; background: var(--card); border: 1px solid #e5e8ee; border-radius: 14px; display: grid; gap: 12px; grid-template-columns: 1fr auto; padding: 13px 15px; }
+      .sample-text { font-size: 14px; line-height: 1.45; }
+      .sample-text small { color: var(--muted); display: block; font-size: 10px; letter-spacing: .08em; margin-bottom: 3px; text-transform: uppercase; }
+      .badge { border-radius: 999px; font-size: 11px; font-weight: 800; padding: 5px 8px; white-space: nowrap; }
+      .badge.yes { background: var(--green-soft); color: var(--green); }
+      .badge.no { background: #f0f2f5; color: #65707e; }
+      .badge.pending { background: #f4f5f7; color: #89919d; }
+      .note { color: var(--muted); font-size: 12px; line-height: 1.6; margin: 16px 0 0; }
+      @media (max-width: 720px) { .grid { grid-template-columns: 1fr; } .samples { grid-column: auto; } }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="kicker">TIME TRANSLATOR / NATIVE MODEL LAB</div>
+      <h1>选中文本检测<br /><em>本地模型调试。</em></h1>
+      <p class="lede">这页只测试 Chrome 内置 Gemini Nano 是否能识别“这是不是时间表达”，以及能否抽取日期、时间和时区。最终北京时间换算仍由插件本地规则完成。</p>
+
+      <div class="toolbar">
+        <button id="check">检查模型状态</button>
+        <button class="secondary" id="minimal" disabled>最小 create 测试</button>
+        <button class="secondary" id="run" disabled>运行样例</button>
+        <span class="status" id="status">尚未检查</span>
+      </div>
+
+      <section class="grid">
+        <div class="panel">
+          <h2>运行环境</h2>
+          <div class="facts">
+            <div class="fact"><span>LanguageModel API</span><strong id="api">未检查</strong></div>
+            <div class="fact"><span>模型状态</span><strong id="availability">未检查</strong></div>
+            <div class="fact"><span>输入语言</span><strong>English</strong></div>
+            <div class="fact"><span>输出格式</span><strong>JSON</strong></div>
+          </div>
+          <p class="note">Chrome 内置的是 API 和模型管理器；首次创建 session 可能按设备下载 Gemini Nano 权重。下载完成后，提示词在本机运行，不会发送到云端。</p>
+        </div>
+        <div class="panel">
+          <h2>原始日志</h2>
+          <pre id="log">等待开始…</pre>
+        </div>
+
+        <div class="samples" id="samples"></div>
+      </section>
+    </main>
+
+    <script>
+      const MODEL_OPTIONS = {
+        expectedInputs: [{ type: "text", languages: ["en"] }],
+        expectedOutputs: [{ type: "text", languages: ["en"] }],
+      };
+      const RESPONSE_SCHEMA = {
+        type: "object",
+        properties: {
+          is_time_expression: { type: "boolean" },
+          confidence: { type: "string", enum: ["high", "medium", "low"] },
+          date_expression: { type: "string" },
+          start_time: { type: "string" },
+          end_time: { type: "string" },
+          relation: { type: "string" },
+          source_time_zone: { type: "string" },
+          needs_clarification: { type: "boolean" },
+          reason: { type: "string" },
+        },
+        required: [
+          "is_time_expression",
+          "confidence",
+          "date_expression",
+          "start_time",
+          "end_time",
+          "relation",
+          "source_time_zone",
+          "needs_clarification",
+          "reason",
+        ],
+        additionalProperties: false,
+      };
+      const CASES = [
+        { label: "明确时间", text: "today before 3 pm UK", expected: true },
+        { label: "日期 + 城市", text: "next Monday at 5 pm New York", expected: true },
+        { label: "复杂自然语言", text: "sometime before close of business next Thursday London time", expected: true },
+        { label: "普通句子", text: "before the meeting, please review version 3", expected: false },
+        { label: "裸数字", text: "The total is 12 items", expected: false },
+        { label: "没有时间", text: "next Monday", expected: false },
+      ];
+
+      const $ = (selector) => document.querySelector(selector);
+      const logElement = $("#log");
+      const log = (value) => {
+        logElement.textContent += `${value}\n`;
+        logElement.scrollTop = logElement.scrollHeight;
+      };
+      let session = null;
+      let minimalSession = null;
+      let availabilityState = null;
+
+      function renderSamples() {
+        $("#samples").innerHTML = CASES.map((item, index) => `
+          <article class="sample">
+            <div class="sample-text"><small>${item.label}</small>${item.text}</div>
+            <span class="badge pending" id="badge-${index}">未运行</span>
+          </article>
+        `).join("");
+      }
+
+      function setFact(selector, value, className = "") {
+        const element = $(selector);
+        element.textContent = value;
+        element.className = className;
+      }
+
+      async function checkAvailability() {
+        if (!("LanguageModel" in window)) {
+          availabilityState = "unavailable";
+          setFact("#api", "不可用", "unknown");
+          setFact("#availability", "无 API", "unknown");
+          $("#status").textContent = "当前页面没有 LanguageModel";
+          $("#minimal").disabled = true;
+          $("#run").disabled = true;
+          return false;
+        }
+
+        const availability = await LanguageModel.availability(MODEL_OPTIONS);
+        availabilityState = availability;
+        log(`LanguageModel.availability(MODEL_OPTIONS) = "${availability}"`);
+        setFact("#api", "可用", "ready");
+        setFact("#availability", availability, availability === "unavailable" ? "unknown" : "ready");
+        const statusText = {
+          available: "模型已在本机，可以运行样例",
+          downloadable: "模型尚未下载，运行样例会开始下载",
+          downloading: "Chrome 正在下载模型",
+          unavailable: "当前环境不可用",
+        }[availability] || "未知状态";
+        $("#status").textContent = statusText;
+        $("#minimal").disabled = availability === "unavailable";
+        $("#run").disabled = availability === "unavailable";
+        return availability !== "unavailable";
+      }
+
+      function attachProgressMonitor(monitor, label) {
+        monitor.addEventListener("downloadprogress", (event) => {
+          const percent = Math.round(event.loaded * 100);
+          if (availabilityState === "available") {
+            log(`${label} 收到 downloadprogress=${percent}%，但 availability=available；这不是下载状态，已忽略进度条。`);
+            $("#status").textContent = "模型已在本机，正在初始化 Chrome session…";
+            return;
+          }
+          $("#status").textContent = `模型下载 ${percent}%`;
+          log(`${label} 模型下载：${percent}%`);
+        });
+      }
+
+      async function ensureSession() {
+        if (session) return session;
+        const started = performance.now();
+        const controller = new AbortController();
+        const timeout = setTimeout(() => {
+          log("45 秒内没有完成模型初始化：如果 availability=available，这更像是 Chrome 内部初始化或当前页面上下文问题，而不是网页请求。");
+          controller.abort();
+        }, 45_000);
+        try {
+          log(`开始完整 create()；userActivation=${navigator.userActivation?.isActive ?? "unknown"}`);
+          session = await LanguageModel.create({
+            ...MODEL_OPTIONS,
+            signal: controller.signal,
+            initialPrompts: [{
+              role: "system",
+              content: [
+                "You classify selected English text for a timezone converter.",
+                "Return only JSON matching the schema.",
+                "Set is_time_expression to false for ordinary prose, prices, versions, IDs, and dates without a time.",
+                "Do not invent a date, time, city, or timezone. Set needs_clarification to true when information is missing or ambiguous.",
+                "Do not calculate Beijing time.",
+              ].join(" "),
+            }],
+            monitor: (monitor) => attachProgressMonitor(monitor, "完整 session"),
+          });
+          log(`session 初始化：${Math.round(performance.now() - started)} ms`);
+          return session;
+        } finally {
+          clearTimeout(timeout);
+        }
+      }
+
+      async function runMinimalCreate() {
+        $("#minimal").disabled = true;
+        const started = performance.now();
+        const controller = new AbortController();
+        const timeout = setTimeout(() => {
+          log("最小 create 测试超过 45 秒，主动中止。");
+          controller.abort();
+        }, 45_000);
+        try {
+          const available = await checkAvailability();
+          if (!available) return;
+          if (minimalSession) {
+            log("最小 session 已存在，未重复创建。");
+            $("#status").textContent = "最小 create 已完成";
+            return;
+          }
+          log(`开始最小 LanguageModel.create()：不传提示词、schema 或语言参数；userActivation=${navigator.userActivation?.isActive ?? "unknown"}`);
+          minimalSession = await LanguageModel.create({
+            signal: controller.signal,
+            monitor: (monitor) => attachProgressMonitor(monitor, "最小 create"),
+          });
+          log(`最小 create 成功：${Math.round(performance.now() - started)} ms`);
+          $("#status").textContent = "最小 create 已完成";
+        } catch (error) {
+          log(`最小 create 失败：${error.name}: ${error.message}`);
+          $("#status").textContent = "最小 create 失败，请查看日志";
+        } finally {
+          clearTimeout(timeout);
+          $("#minimal").disabled = availabilityState === "unavailable";
+        }
+      }
+
+      async function runSamples() {
+        $("#run").disabled = true;
+        logElement.textContent = "";
+        try {
+          const available = await checkAvailability();
+          if (!available) return;
+          const activeSession = await ensureSession();
+          for (let index = 0; index < CASES.length; index += 1) {
+            const item = CASES[index];
+            const started = performance.now();
+            const raw = await activeSession.prompt(
+              `Reference date: 2026-08-20\nSelected text: ${item.text}`,
+              { responseConstraint: RESPONSE_SCHEMA },
+            );
+            const elapsed = Math.round(performance.now() - started);
+            const parsed = JSON.parse(raw);
+            const passed = parsed.is_time_expression === item.expected;
+            const badge = $(`#badge-${index}`);
+            badge.textContent = passed ? "判断符合预期" : "判断不符";
+            badge.className = `badge ${passed ? (item.expected ? "yes" : "no") : "pending"}`;
+            log(`\n[${elapsed} ms] ${item.text}`);
+            log(JSON.stringify(parsed, null, 2));
+          }
+          $("#status").textContent = "样例运行完成";
+        } catch (error) {
+          log(`${error.name}: ${error.message}`);
+          $("#status").textContent = "运行失败，请查看日志";
+        } finally {
+          $("#run").disabled = false;
+        }
+      }
+
+      $("#check").addEventListener("click", async () => {
+        $("#check").disabled = true;
+        logElement.textContent = "";
+        try {
+          log(`User agent: ${navigator.userAgent}`);
+          log(`检查时间：${new Date().toLocaleTimeString()}`);
+          await checkAvailability();
+        } catch (error) {
+          log(`${error.name}: ${error.message}`);
+          $("#status").textContent = "检查失败，请查看日志";
+        } finally {
+          $("#check").disabled = false;
+        }
+      });
+      $("#run").addEventListener("click", runSamples);
+      $("#minimal").addEventListener("click", runMinimalCreate);
+      renderSamples();
+    </script>
+  </body>
+</html>

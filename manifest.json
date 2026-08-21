@@ -1,0 +1,41 @@
+{
+  "manifest_version": 3,
+  "name": "Time Translator",
+  "version": "0.1.1",
+  "description": "元气100%的时区转换工具：轻松读懂时差。",
+  "icons": {
+    "16": "src/assets/icon-16.png",
+    "32": "src/assets/icon-32.png",
+    "48": "src/assets/icon-48.png",
+    "128": "src/assets/icon-128.png"
+  },
+  "permissions": ["storage", "contextMenus"],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "src/background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "Time Translator · 元气100%",
+    "default_icon": {
+      "16": "src/assets/icon-16.png",
+      "32": "src/assets/icon-32.png"
+    },
+    "default_popup": "src/popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["src/content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "commands": {
+    "convert-selection": {
+      "suggested_key": {
+        "default": "Alt+Shift+T"
+      },
+      "description": "转换当前选中文本"
+    }
+  }
+}
