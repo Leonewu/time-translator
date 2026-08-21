@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { buildReportPayload, buildFeishuText, postCaseReport } from "../src/shared/report.js";
 
-test("反馈上报 payload 只保留当前 case 的必要字段", () => {
+test("反馈上报 payload 保留当前 case 及转换详情，不包含敏感配置", () => {
   const payload = buildReportPayload({
     rawText: "today before 3 pm UK",
     result: {
@@ -12,6 +12,15 @@ test("反馈上报 payload 只保留当前 case 的必要字段", () => {
       targetTimeZone: "Asia/Shanghai",
       relation: "before",
       engine: "在线模型 · gemini",
+      sourceTimeZoneName: "BST",
+      dateExpression: "today",
+      timeExpression: "15:00",
+      localDateTime: { year: 2026, month: 8, day: 21, hour: 15, minute: 0, second: 0 },
+      instant: "2026-08-21T14:00:00.000Z",
+      endInstant: null,
+      sourceOffsetMinutes: null,
+      assumptions: ["before 按“该时间之前”显示"],
+      confidence: "high",
       apiKey: "should-not-be-sent",
       pageText: "should-not-be-sent",
     },
@@ -30,9 +39,33 @@ test("反馈上报 payload 只保留当前 case 的必要字段", () => {
     relation: "before",
     engine: "在线模型 · gemini",
     referenceDate: "2026/08/21",
+    details: {
+      sourceTimeZoneName: "BST",
+      sourceTimeZone: "Europe/London",
+      targetTimeZone: "Asia/Shanghai",
+      relation: "before",
+      relationLabel: "不晚于",
+      engine: "在线模型 · gemini",
+      dateExpression: "today",
+      timeExpression: "15:00",
+      localDateTime: { year: 2026, month: 8, day: 21, hour: 15, minute: 0, second: 0 },
+      localDateTimeText: "2026/08/21 15:00:00",
+      instant: "2026-08-21T14:00:00.000Z",
+      endInstant: "",
+      sourceOffsetMinutes: null,
+      referenceDate: "2026/08/21",
+      assumptions: ["before 按“该时间之前”显示"],
+      confidence: "high",
+      error: "",
+    },
     extensionVersion: "0.1.7",
   });
-  assert.doesNotMatch(buildFeishuText(payload), /should-not-be-sent/);
+  const feishuText = buildFeishuText(payload);
+  assert.match(feishuText, /源时区名称：BST/);
+  assert.match(feishuText, /语义：不晚于/);
+  assert.match(feishuText, /源时区本地时间：2026\/08\/21 15:00:00/);
+  assert.match(feishuText, /计算假设：before 按/);
+  assert.doesNotMatch(JSON.stringify(payload), /should-not-be-sent/);
 });
 
 test("反馈上报拒绝不安全地址并发送飞书文本消息", async () => {

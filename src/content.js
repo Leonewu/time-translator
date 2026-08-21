@@ -304,7 +304,7 @@ function renderResult(result, text, rect) {
     const reported = reportState === "sent";
     const failed = reportState === "failed";
     const sending = reportState === "sending";
-    const label = reported ? "已报告" : failed ? "报告失败，点击重试" : "报告转换有误";
+    const label = reported ? "已抱怨" : failed ? "抱怨失败，点击重试" : "抱怨一下";
     const buttonClass = `report${reported ? " reported" : failed ? " failed" : ""}`;
     return `<button class="${buttonClass}" aria-label="${label}" title="${label}" data-action="report"${sending ? " disabled aria-busy=\"true\"" : ""}>${icon(reported ? "check" : "report")}</button>`;
   };

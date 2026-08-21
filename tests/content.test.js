@@ -76,9 +76,10 @@ test("成功和失败 Tooltip 都提供手动重新解析按钮", () => {
   assert.match(contentSource, /renderAndParse\(\{ text: retryText, rect: retryRect, referenceContext: currentReferenceContext \}, true\)/);
 });
 
-test("Tooltip 提供报告转换有误按钮，并只通过后台上报当前 case", () => {
+test("Tooltip 提供抱怨按钮，并只通过后台上报当前 case", () => {
   assert.match(contentSource, /report: '<span[^>]*>💢<\/span>'/);
   assert.match(contentSource, /data-action="report"/);
   assert.match(contentSource, /type: "REPORT_CASE"/);
-  assert.match(contentSource, /报告转换有误/);
+  assert.match(contentSource, /抱怨一下/);
+  assert.match(contentSource, /已抱怨/);
 });
