@@ -18,6 +18,18 @@ test("解析 today before 3 pm UK", () => {
   assert.equal(result.displayText, "2026/08/20（周四）22:00 前");
 });
 
+test("Gmail 邮件时间作为 reference 时，today 使用邮件当地日期", () => {
+  const result = parseEnglishTimeExpression("today 12:00 UK", {
+    reference: new Date("2026-08-20T23:30:00.000Z"),
+    defaultSourceTimeZone: "Europe/London",
+    targetTimeZone: "Asia/Shanghai",
+  });
+
+  assert.equal(result.dateExpression, "today");
+  assert.equal(result.localDateTime.day, 21);
+  assert.equal(result.displayText, "2026/08/21（周五）19:00");
+});
+
 test("解析 ISO 8601 固定偏移量", () => {
   const result = parseEnglishTimeExpression("2026-08-20T15:00:00-07:00", {
     reference,

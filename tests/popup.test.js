@@ -92,9 +92,9 @@ test("Popup 提供自定义关键词输入框", () => {
 test("Popup 提供反馈邮件入口和当前版本号", () => {
   assert.match(popupHtml, /mailto:reon\.hypr@gmail\.com\?subject=Time%20Translator%20Feedback/);
   assert.match(popupHtml, /data-i18n="feedback"/);
-  assert.match(popupHtml, />v0\.1\.5<\/span>/);
+  assert.match(popupHtml, />v0\.1\.6<\/span>/);
   assert.match(popupCss, /\.feedback-link \{[^}]*margin-left:\s*auto/);
-  assert.match(manifest, /"version": "0\.1\.5"/);
+  assert.match(manifest, /"version": "0\.1\.6"/);
 });
 
 test("Popup 明确在线模型只接收选中文本", () => {

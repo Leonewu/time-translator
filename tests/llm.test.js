@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { parseStructuredTimeExpression } from "../src/shared/parser.js";
-import { getModelListEndpoint, listAvailableModels, parseJsonObject, requestOpenAICompatibleExtraction } from "../src/shared/llm.js";
+import { buildExtractionPrompt, getModelListEndpoint, listAvailableModels, parseJsonObject, requestOpenAICompatibleExtraction } from "../src/shared/llm.js";
 
 test("从 markdown 包裹的 JSON 中提取结构化结果", () => {
   assert.deepEqual(parseJsonObject('```json\n{"relation":"before"}\n```'), {
@@ -29,6 +29,19 @@ test("在线模型结构化结果仍由本地时区逻辑换算", () => {
   );
 
   assert.equal(result.displayText, "2026/08/20（周四）22:00 前");
+});
+
+test("Gmail 上下文会告诉模型 today 相对邮件时间解析", () => {
+  const prompt = buildExtractionPrompt(
+    "today 12:00 UK",
+    new Date("2026-08-20T23:30:00.000Z"),
+    "Europe/London",
+    { kind: "gmail_message", referenceInstant: "2026-08-20T23:30:00.000Z" },
+  );
+
+  assert.match(prompt, /selected Gmail message timestamp/);
+  assert.match(prompt, /not the current time/);
+  assert.match(prompt, /Reference instant: 2026-08-20T23:30:00\.000Z/);
 });
 
 test("标准化 LLM 结果只提供完整当地时间，插件负责时区换算", () => {

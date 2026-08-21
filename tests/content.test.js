@@ -59,5 +59,5 @@ test("成功和失败 Tooltip 都提供手动重新解析按钮", () => {
   assert.match(contentSource, /data-action="refresh"/);
   assert.match(contentSource, /refresh: '<svg/);
   assert.match(contentSource, /action === "refresh"/);
-  assert.match(contentSource, /renderAndParse\(\{ text: retryText, rect: retryRect \}, true\)/);
+  assert.match(contentSource, /renderAndParse\(\{ text: retryText, rect: retryRect, referenceContext: currentReferenceContext \}, true\)/);
 });

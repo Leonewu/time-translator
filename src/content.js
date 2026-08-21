@@ -8,6 +8,7 @@ let dismissedSelection = null;
 let autoConvert = true;
 let customTimeKeywords = [];
 let selectionTimer = null;
+let currentReferenceContext = null;
 
 const explicitTwelveHourTime = /\b(?:0?[1-9]|1[0-2])(?::[0-5]\d)?\s*(?:a\.?m\.?|p\.?m\.?)\b/i;
 const explicitTwentyFourHourTime = /\b(?:[01]?\d|2[0-3]):[0-5]\d\b/;
@@ -102,8 +103,10 @@ function getSelectionInfo() {
   const selection = window.getSelection();
   const text = selection?.toString().trim() || "";
   if (!text || !selection?.rangeCount) return null;
-  const rect = selection.getRangeAt(0).getBoundingClientRect();
-  return { text, rect };
+  const range = selection.getRangeAt(0);
+  const rect = range.getBoundingClientRect();
+  const referenceContext = globalThis.TimeTranslatorGmail?.extractMessageContext(range.startContainer) || null;
+  return { text, rect, referenceContext };
 }
 
 function scheduleSelectionParse() {
@@ -302,6 +305,7 @@ function renderResult(result, text, rect) {
       <div class="details-row"><span class="details-label">语义</span><span class="details-value">${escapeHtml(relationLabels[result.relation] || result.relation || "时间转换")}</span></div>
       <div class="details-row"><span class="details-label">解析</span><span class="details-value">${escapeHtml(result.engine || "在线模型")}</span></div>
       <div class="details-row"><span class="details-label">目标</span><span class="details-value">${escapeHtml(targetZone)}</span></div>
+      ${result.referenceContext ? `<div class="details-row"><span class="details-label">参考</span><span class="details-value">Gmail 邮件时间</span></div>` : ""}
       ${assumptions ? `<div class="assumption">${assumptions}</div>` : ""}
       ${result.error ? `<div class="error">${escapeHtml(result.error)}</div>` : ""}
     </div>` : "";
@@ -353,8 +357,9 @@ function renderAndParse(info, force = false) {
   }
   const requestId = ++requestSequence;
   detailsOpen = false;
+  currentReferenceContext = info.referenceContext || null;
   renderLoading(info.text, info.rect);
-  sendRuntimeMessage({ type: "PARSE_TEXT", text: info.text }, (result, runtimeError) => {
+  sendRuntimeMessage({ type: "PARSE_TEXT", text: info.text, referenceContext: currentReferenceContext }, (result, runtimeError) => {
     if (requestId !== requestSequence) return;
     if (runtimeError || !result?.ok) {
       renderResult(
@@ -403,7 +408,7 @@ function handleTooltipClick(event) {
   } else if (action === "refresh") {
     const retryText = currentText;
     const retryRect = currentAnchorRect;
-    if (retryText) renderAndParse({ text: retryText, rect: retryRect }, true);
+    if (retryText) renderAndParse({ text: retryText, rect: retryRect, referenceContext: currentReferenceContext }, true);
   } else if (action === "info") {
     detailsOpen = !detailsOpen;
     renderResult(currentResult, currentText, currentAnchorRect);

@@ -51,9 +51,13 @@ export const NORMALIZED_TIME_SCHEMA = {
 // Kept as a compatibility export for callers that used the old name.
 export const TIME_EXTRACTION_SCHEMA = NORMALIZED_TIME_SCHEMA;
 
-export function buildExtractionPrompt(text, reference, defaultSourceTimeZone) {
+export function buildExtractionPrompt(text, reference, defaultSourceTimeZone, referenceContext = null) {
+  const contextLine = referenceContext?.kind === "gmail_message"
+    ? "Reference context: this instant comes from the selected Gmail message timestamp. Resolve today, yesterday, tomorrow, and weekdays relative to this message timestamp, not the current time."
+    : "Reference context: use this supplied instant as the current reference for relative date words.";
   return `Reference instant: ${reference.toISOString()}
 Default source time zone when omitted: ${defaultSourceTimeZone}
+${contextLine}
 Selected English text: ${JSON.stringify(text)}
 
 Extract the time expression now.`;
@@ -192,6 +196,7 @@ export async function requestOpenAICompatibleExtraction({
   text,
   reference = new Date(),
   defaultSourceTimeZone = "Europe/London",
+  referenceContext = null,
   timeoutMs = 12000,
 }) {
   if (!config?.endpoint || !config?.model || !config?.apiKey) {
@@ -209,7 +214,7 @@ export async function requestOpenAICompatibleExtraction({
         { role: "system", content: NORMALIZATION_SYSTEM_PROMPT },
         {
           role: "user",
-          content: buildExtractionPrompt(text, reference, defaultSourceTimeZone),
+          content: buildExtractionPrompt(text, reference, defaultSourceTimeZone, referenceContext),
         },
       ],
       controller.signal,
