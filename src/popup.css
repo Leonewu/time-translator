@@ -52,10 +52,16 @@ button { cursor: pointer; }
 
 .popup-shell {
   background: radial-gradient(circle at 100% 0%, rgba(255, 189, 50, .22), transparent 30%), var(--night);
+  isolation: isolate;
   min-height: 100vh;
+  overflow: hidden;
   padding: 22px 20px 18px;
+  position: relative;
   width: 100%;
 }
+.popup-shell::after { background: url("./assets/time-cloud.png") center / cover no-repeat; border-radius: 50%; content: ""; height: 236px; opacity: .1; pointer-events: none; position: absolute; right: -58px; top: 450px; width: 236px; z-index: 0; }
+.popup-shell > * { position: relative; z-index: 1; }
+:root[data-theme="dark"] .popup-shell::after { filter: saturate(.65) brightness(.7); mix-blend-mode: soft-light; opacity: .16; }
 .topbar { align-items: flex-start; display: flex; justify-content: space-between; }
 .topbar-actions { align-items: flex-start; display: flex; gap: 10px; }
 .theme-toggle { align-items: center; background: transparent; border: 1px solid var(--line); border-radius: 999px; color: var(--paper); display: inline-flex; height: 25px; justify-content: center; padding: 0; width: 25px; }

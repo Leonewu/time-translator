@@ -67,6 +67,7 @@ test("Popup 明确在线模型只接收选中文本", () => {
 test("Popup 和扩展 manifest 使用时区小云朵 logo", () => {
   assert.match(popupHtml, /class="brand-logo"[^>]+src="\.\/assets\/time-cloud\.png"/);
   assert.match(manifest, /src\/assets\/icon-128\.png/);
+  assert.match(popupCss, /popup-shell::after[\s\S]*url\("\.\/assets\/time-cloud\.png"\)/);
 });
 
 test("产品名称统一为 Time Translator", () => {
