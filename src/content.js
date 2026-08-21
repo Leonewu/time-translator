@@ -9,16 +9,20 @@ let autoConvert = true;
 let customTimeKeywords = [];
 let selectionTimer = null;
 let currentReferenceContext = null;
+let reportCaseKey = "";
+let reportState = "idle";
+let reportError = "";
 
 const explicitTwelveHourTime = /\b(?:0?[1-9]|1[0-2])(?::[0-5]\d)?\s*(?:a\.?m\.?|p\.?m\.?)\b/i;
 const explicitTwentyFourHourTime = /\b(?:[01]?\d|2[0-3]):[0-5]\d\b/;
-const namedTime = /\b(?:noon|midnight)\b/i;
+const namedTime = /\b(?:noon|midnight|close\s+of\s+business)\b/i;
+const weekdayWithTimeZone = /\b(?:sunday|monday|tuesday|wednesday|thursday|friday|saturday)\b[\s\S]{0,32}\b(?:uk|british\s+time|london(?:\s+time)?|bst|gmt|eastern\s+time|eastern|et|new\s+york|est|edt|pacific\s+time|pacific|pt|los\s+angeles|pst|pdt|japan(?:\s+time)?|jst|tokyo(?:\s+time)?|singapore(?:\s+time)?|sgt|india(?:\s+time)?|ist|mumbai|central\s+european\s+time|cet|paris(?:\s+time)?|berlin(?:\s+time)?|china(?:\s+time)?|beijing(?:\s+time)?|cst|utc|zulu)\b/i;
 const standardDateTime = /\b20\d{2}[-/]\d{1,2}[-/]\d{1,2}[T\s]+(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?(?:\s*(?:Z|UTC|GMT|UTC[+-]\d{1,2}(?::?\d{2})?|GMT[+-]\d{1,2}(?::?\d{2})?|[+-]\d{2}:?\d{2}))?/i;
 
 function isTimeCandidate(text) {
   const value = String(text || "").trim();
   if (!value || value.length > 240 || /https?:\/\//i.test(value)) return false;
-  if (explicitTwelveHourTime.test(value) || explicitTwentyFourHourTime.test(value) || namedTime.test(value) || standardDateTime.test(value)) return true;
+  if (explicitTwelveHourTime.test(value) || explicitTwentyFourHourTime.test(value) || namedTime.test(value) || weekdayWithTimeZone.test(value) || standardDateTime.test(value)) return true;
   return matchesCustomKeyword(value);
 }
 
@@ -220,13 +224,14 @@ function tooltipStyles() {
     }
     :host([data-placement="top"]) .card::after { bottom: -8px; }
     :host([data-placement="bottom"]) .card::after { top: -8px; transform: translateX(-50%) rotate(180deg); }
-    .flow { align-items: center; display: grid; gap: 6px; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1.35fr); }
-    .side { min-width: 0; }
-    .source { color: #17191f; font-size: 11px; font-weight: 400; line-height: 1.25; max-width: 145px; overflow-wrap: anywhere; white-space: normal; }
+    .flow { align-items: start; display: grid; gap: 6px; grid-template-columns: minmax(0, 1fr) auto max-content; }
+    .side { align-self: start; min-width: 0; }
+    .target-side { align-items: flex-end; display: flex; flex-direction: column; }
+    .source { color: #17191f; font-size: 11px; font-weight: 400; line-height: 1.25; max-width: none; overflow-wrap: break-word; white-space: normal; }
     .zone { color: #8d96a3; font-size: 8px; font-weight: 400; letter-spacing: 0; line-height: 1.2; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .target-side .zone { text-align: right; }
-    .arrow { color: #2d5cff; font-size: 15px; font-weight: 400; line-height: 1; }
-    .result { color: #2d5cff; font-size: 12px; font-weight: 400; letter-spacing: -.01em; line-height: 1.2; text-align: right; }
+    .arrow { align-self: center; color: #2d5cff; font-size: 15px; font-weight: 400; line-height: 1; }
+    .result { color: #2d5cff; font-size: 12px; font-weight: 400; letter-spacing: -.01em; line-height: 1.2; text-align: right; white-space: nowrap; }
     .result.loading { color: #2d5cff; font-size: 10px; font-weight: 400; }
     .result.failed { color: #d94b3f; font-size: 10px; font-weight: 400; }
     .toolbar { align-items: center; display: flex; gap: 1px; justify-content: flex-end; margin-top: 1px; }
@@ -237,6 +242,11 @@ function tooltipStyles() {
     .copy:hover, .copy:focus-visible { color: #2148d7; }
     .refresh { color: #687180; }
     .refresh:hover, .refresh:focus-visible { color: #2d5cff; }
+    .report { color: #d8834f; }
+    .report:hover, .report:focus-visible { color: #c76537; }
+    .report.reported { color: #5f9d7e; }
+    .report.failed { color: #d94b3f; }
+    .report-emoji { display: inline-block; font-size: 11px; line-height: 1; }
     .info.active { background: #eef2ff; color: #2d5cff; }
     .close { margin-left: 1px; }
     .details { color: #687180; font-size: 9px; line-height: 1.4; margin-top: 6px; padding-top: 1px; }
@@ -258,6 +268,7 @@ function icon(name) {
     close: '<svg aria-hidden="true" viewBox="0 0 16 16" width="12" height="12"><path d="m4.5 4.5 7 7m0-7-7 7" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.4"/></svg>',
     check: '<svg aria-hidden="true" viewBox="0 0 16 16" width="12" height="12"><path d="m3.4 8.4 3 3.1 6.2-6.7" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7"/></svg>',
     refresh: '<svg aria-hidden="true" viewBox="0 0 16 16" width="12" height="12"><path d="M13 5.7A5.2 5.2 0 0 0 3.5 5M3.5 5V2.8M3.5 5h2.2M3 10.3A5.2 5.2 0 0 0 12.5 11M12.5 11v2.2M12.5 11h-2.2" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.4"/></svg>',
+    report: '<span class="report-emoji" aria-hidden="true">💢</span>',
   };
   return icons[name] || "";
 }
@@ -282,6 +293,21 @@ function renderResult(result, text, rect) {
   currentResult = result;
   currentText = text;
   currentAnchorRect = rect;
+  const nextReportCaseKey = `${text}\u0000${result?.ok ? result.displayText || "" : result?.reason || result?.error || ""}`;
+  if (reportCaseKey !== nextReportCaseKey) {
+    reportCaseKey = nextReportCaseKey;
+    reportState = "idle";
+    reportError = "";
+  }
+
+  const reportButton = () => {
+    const reported = reportState === "sent";
+    const failed = reportState === "failed";
+    const sending = reportState === "sending";
+    const label = reported ? "已报告" : failed ? "报告失败，点击重试" : "报告转换有误";
+    const buttonClass = `report${reported ? " reported" : failed ? " failed" : ""}`;
+    return `<button class="${buttonClass}" aria-label="${label}" title="${label}" data-action="report"${sending ? " disabled aria-busy=\"true\"" : ""}>${icon(reported ? "check" : "report")}</button>`;
+  };
   if (!result?.ok) {
     host.shadowRoot.innerHTML = `<style>${tooltipStyles()}</style>
       <div class="card">
@@ -293,6 +319,7 @@ function renderResult(result, text, rect) {
         <div class="error">${escapeHtml(result?.reason || result?.error || "请补充日期、时间或时区")}</div>
         <div class="error-actions">
           <button class="refresh" aria-label="重新解析" title="重新解析" data-action="refresh">${icon("refresh")}</button>
+          ${reportButton()}
           <button class="close" aria-label="关闭" title="关闭" data-action="close">${icon("close")}</button>
         </div>
       </div>`;
@@ -306,14 +333,14 @@ function renderResult(result, text, rect) {
   const relationLabels = { before: "不晚于", by: "截止", after: "之后", at: "时间点", between: "时间范围", from: "时间范围" };
   const assumptions = (result.assumptions || []).map((item) => `<div>· ${escapeHtml(item)}</div>`).join("");
   const referenceNote = result.referenceContext?.kind === "gmail_message" && result.referenceContext.relative
-    ? `<div class="reference-note">参考邮件日期${result.referenceContext.dateText ? `：${escapeHtml(result.referenceContext.dateText)}` : ""}</div>`
+    ? `<div class="reference-note">按邮件日期计算${result.referenceContext.dateText ? `：${escapeHtml(result.referenceContext.dateText)}` : ""}</div>`
     : "";
   const details = detailsOpen ? `<div class="details">
       <div class="details-row"><span class="details-label">源时区</span><span class="details-value">${source}</span></div>
       <div class="details-row"><span class="details-label">语义</span><span class="details-value">${escapeHtml(relationLabels[result.relation] || result.relation || "时间转换")}</span></div>
       <div class="details-row"><span class="details-label">解析</span><span class="details-value">${escapeHtml(result.engine || "在线模型")}</span></div>
       <div class="details-row"><span class="details-label">目标</span><span class="details-value">${escapeHtml(targetZone)}</span></div>
-      ${result.referenceContext?.kind === "gmail_message" && result.referenceContext.relative ? `<div class="details-row"><span class="details-label">参考</span><span class="details-value">邮件日期${result.referenceContext.dateText ? ` · ${escapeHtml(result.referenceContext.dateText)}` : ""}</span></div>` : ""}
+      ${result.referenceContext?.kind === "gmail_message" && result.referenceContext.relative ? `<div class="details-row"><span class="details-label">参考</span><span class="details-value">按邮件日期计算${result.referenceContext.dateText ? ` · ${escapeHtml(result.referenceContext.dateText)}` : ""}</span></div>` : ""}
       ${assumptions ? `<div class="assumption">${assumptions}</div>` : ""}
       ${result.error ? `<div class="error">${escapeHtml(result.error)}</div>` : ""}
     </div>` : "";
@@ -328,12 +355,13 @@ function renderResult(result, text, rect) {
         <div class="side target-side">
           <div class="result">${escapeHtml(result.displayText)}</div>
           <div class="zone">${escapeHtml(targetZone)}</div>
+          ${referenceNote}
         </div>
       </div>
-      ${referenceNote}
       <div class="toolbar">
         <button class="copy" aria-label="复制北京时间" title="复制北京时间" data-action="copy" data-copy="${escapeHtml(result.displayText)}">${icon("copy")}</button>
         <button class="refresh" aria-label="重新解析" title="重新解析" data-action="refresh">${icon("refresh")}</button>
+        ${reportButton()}
         <button class="info${detailsOpen ? " active" : ""}" aria-label="查看转换详情" title="查看转换详情" data-action="info">${icon("info")}</button>
         <button class="close" aria-label="关闭" title="关闭" data-action="close">${icon("close")}</button>
       </div>
@@ -418,6 +446,26 @@ function handleTooltipClick(event) {
     const retryText = currentText;
     const retryRect = currentAnchorRect;
     if (retryText) renderAndParse({ text: retryText, rect: retryRect, referenceContext: currentReferenceContext }, true);
+  } else if (action === "report") {
+    if (!currentText || reportState === "sending" || reportState === "sent") return;
+    const caseKey = reportCaseKey;
+    reportState = "sending";
+    reportError = "";
+    renderResult(currentResult, currentText, currentAnchorRect);
+    const sent = sendRuntimeMessage(
+      { type: "REPORT_CASE", rawText: currentText, result: currentResult, referenceContext: currentReferenceContext },
+      (response, runtimeError) => {
+        if (caseKey !== reportCaseKey) return;
+        reportState = response?.ok ? "sent" : "failed";
+        reportError = runtimeError?.message || response?.reason || "反馈上报失败";
+        renderResult(currentResult, currentText, currentAnchorRect);
+      },
+    );
+    if (!sent && caseKey === reportCaseKey) {
+      reportState = "failed";
+      reportError = "反馈上报失败";
+      renderResult(currentResult, currentText, currentAnchorRect);
+    }
   } else if (action === "info") {
     detailsOpen = !detailsOpen;
     renderResult(currentResult, currentText, currentAnchorRect);

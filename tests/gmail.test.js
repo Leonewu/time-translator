@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import { needsReferenceDate } from "../src/shared/reference.js";
 
 await import(new URL("../src/shared/gmail.js", import.meta.url));
 const gmail = globalThis.TimeTranslatorGmail;
@@ -19,6 +20,12 @@ test("Gmail 时间提取支持 ISO、英文和中文完整日期", () => {
   assert.equal(gmail.parseGmailDateValue("Thu, 20 Aug 2026 15:30:00 GMT").toISOString(), "2026-08-20T15:30:00.000Z");
   assert.equal(gmail.parseGmailDateValue("2026年8月20日 下午3:30").toISOString(), "2026-08-20T07:30:00.000Z");
   assert.equal(gmail.parseGmailDateValue("not a date"), null);
+});
+
+test("Gmail 参考日期覆盖省略日期的时间短语，但不覆盖明确完整日期", () => {
+  assert.equal(needsReferenceDate("between 2 and 4 pm Pacific time"), true);
+  assert.equal(needsReferenceDate("today before 3 pm UK"), true);
+  assert.equal(needsReferenceDate("2026-08-20 15:00 UTC"), false);
 });
 
 test("Gmail 上下文优先取选中文字所在消息的完整时间", () => {

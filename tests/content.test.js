@@ -26,6 +26,11 @@ test("内容脚本从设置读取自定义关键词并参与候选匹配", () =>
   assert.match(contentSource, /\.split\(\/\[\\n,;\]\+\//);
 });
 
+test("内容脚本自动候选包含 close of business 这类命名时间", () => {
+  assert.match(contentSource, /close\\s\+of\\s\+business/);
+  assert.match(contentSource, /weekdayWithTimeZone/);
+});
+
 test("自动解析只在释放鼠标后调度，拖选期间的 selectionchange 不得发请求", () => {
   assert.match(contentSource, /function scheduleSelectionParse\(\)/);
   assert.match(contentSource, /document\.addEventListener\("pointerup", handleSelectionRelease, true\)/);
@@ -49,6 +54,15 @@ test("Tooltip 尺寸和操作 icon 保持紧凑", () => {
   assert.match(contentSource, /width="12" height="12"/);
 });
 
+test("转换结果日期保持单行完整显示，并提示 Gmail 参考日期", () => {
+  assert.match(contentSource, /\.flow \{[^}]*align-items: start[^}]*grid-template-columns: minmax\(0, 1fr\) auto max-content/);
+  assert.match(contentSource, /\.target-side \{[^}]*display: flex[^}]*flex-direction: column/);
+  assert.match(contentSource, /<div class="side target-side">[\s\S]*\$\{referenceNote\}/);
+  assert.doesNotMatch(contentSource, /\.source \{[^}]*overflow-wrap: anywhere/);
+  assert.match(contentSource, /\.result \{[^}]*white-space: nowrap/);
+  assert.match(contentSource, /按邮件日期计算/);
+});
+
 test("复制成功只切换为勾选 icon，不渲染大号文字", () => {
   assert.match(contentSource, /check: '<svg/);
   assert.match(contentSource, /button\.innerHTML = icon\("check"\)/);
@@ -60,4 +74,11 @@ test("成功和失败 Tooltip 都提供手动重新解析按钮", () => {
   assert.match(contentSource, /refresh: '<svg/);
   assert.match(contentSource, /action === "refresh"/);
   assert.match(contentSource, /renderAndParse\(\{ text: retryText, rect: retryRect, referenceContext: currentReferenceContext \}, true\)/);
+});
+
+test("Tooltip 提供报告转换有误按钮，并只通过后台上报当前 case", () => {
+  assert.match(contentSource, /report: '<span[^>]*>💢<\/span>'/);
+  assert.match(contentSource, /data-action="report"/);
+  assert.match(contentSource, /type: "REPORT_CASE"/);
+  assert.match(contentSource, /报告转换有误/);
 });

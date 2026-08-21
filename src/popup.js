@@ -10,10 +10,11 @@ const endpoint = document.querySelector("#endpoint");
 const apiKey = document.querySelector("#apiKey");
 const toggleApiKey = document.querySelector("#toggleApiKey");
 const themeToggle = document.querySelector("#themeToggle");
-const modelOptions = document.querySelector("#modelOptions");
+const modelMenu = document.querySelector("#modelMenu");
+const modelMenuToggle = document.querySelector("#modelMenuToggle");
+const modelField = document.querySelector(".model-field");
 const modelStatus = document.querySelector("#modelStatus");
 const refreshModels = document.querySelector("#refreshModels");
-const providerHint = document.querySelector("#providerHint");
 const autoConvert = document.querySelector("#autoConvert");
 const pluginState = document.querySelector("#pluginState");
 const customKeywords = document.querySelector("#customKeywords");
@@ -22,8 +23,12 @@ const testText = document.querySelector("#testText");
 const testButton = document.querySelector("#testLlm");
 const testResult = document.querySelector("#testResult");
 const testJson = document.querySelector("#testJson");
+const systemTheme = globalThis.matchMedia?.("(prefers-color-scheme: dark)");
 let settings;
 let saveTimer;
+let availableModels = [];
+let themeMode = "system";
+let activeProvider = "";
 const saveSettingsInOrder = createSettingsSaver(saveSettings);
 
 for (const [key, value] of Object.entries(PROVIDER_PRESETS)) {
@@ -34,26 +39,39 @@ for (const [key, value] of Object.entries(PROVIDER_PRESETS)) {
 }
 
 function readForm() {
+  const currentProvider = provider.value;
+  const currentProfile = {
+    endpoint: endpoint.value.trim(),
+    model: model.value.trim(),
+    apiKey: apiKey.value.trim(),
+  };
   return {
     autoConvert: autoConvert.checked,
-    theme: document.documentElement.dataset.theme === "dark" ? "dark" : "light",
+    theme: themeMode,
     customKeywords: normalizeCustomKeywords(customKeywords.value),
     targetTimeZone: document.querySelector("#targetTimeZone").value,
     defaultSourceTimeZone: document.querySelector("#defaultSourceTimeZone").value,
+    providerProfiles: {
+      ...(settings?.providerProfiles || {}),
+      [currentProvider]: currentProfile,
+    },
     llm: {
-      provider: provider.value,
-      endpoint: endpoint.value.trim(),
-      model: model.value.trim(),
-      apiKey: apiKey.value.trim(),
+      provider: currentProvider,
+      ...currentProfile,
     },
   };
 }
 
-function fillProviderFields(usePreset = false) {
+function fillProviderFields() {
   const preset = getProviderPreset(provider.value);
-  if (usePreset || !endpoint.value) endpoint.value = preset.endpoint;
-  if (usePreset || !model.value) model.value = preset.model;
-  providerHint.textContent = t(`hint_${provider.value}`);
+  const profile = settings?.providerProfiles?.[provider.value] || {
+    endpoint: preset.endpoint,
+    model: preset.model,
+    apiKey: "",
+  };
+  endpoint.value = profile.endpoint;
+  model.value = profile.model;
+  apiKey.value = profile.apiKey;
 }
 
 function updatePluginState() {
@@ -71,9 +89,10 @@ function updateApiKeyVisibility() {
 }
 
 function applyTheme(theme) {
-  const dark = theme === "dark";
-  document.documentElement.dataset.theme = dark ? "dark" : "light";
-  const label = dark ? t("themeToLight") : t("themeToDark");
+  themeMode = ["light", "dark", "system"].includes(theme) ? theme : "system";
+  const dark = themeMode === "dark" || (themeMode === "system" && Boolean(systemTheme?.matches));
+  document.documentElement.dataset.theme = themeMode;
+  const label = themeMode === "light" ? t("themeToSystem") : dark ? t("themeToLight") : t("themeToDark");
   themeToggle.setAttribute("aria-label", label);
   themeToggle.setAttribute("aria-pressed", String(dark));
   themeToggle.title = label;
@@ -86,13 +105,50 @@ function setModelStatus(text, state = "") {
   if (state) modelStatus.classList.add(`model-status-${state}`);
 }
 
-function writeModelOptions(models) {
-  modelOptions.replaceChildren();
+function setModelMenuOpen(open) {
+  modelMenu.hidden = !open;
+  modelMenuToggle.setAttribute("aria-expanded", String(open));
+  model.setAttribute("aria-expanded", String(open));
+}
+
+function renderModelMenu(query = "") {
+  modelMenu.replaceChildren();
+  const normalizedQuery = String(query || "").trim().toLocaleLowerCase();
+  const models = normalizedQuery
+    ? availableModels.filter((modelId) => modelId.toLocaleLowerCase().includes(normalizedQuery))
+    : availableModels;
+
   for (const modelId of models) {
-    const option = document.createElement("option");
-    option.value = modelId;
-    modelOptions.append(option);
+    const option = document.createElement("button");
+    option.type = "button";
+    option.className = "model-option";
+    option.setAttribute("role", "option");
+    option.dataset.model = modelId;
+    option.textContent = modelId;
+    modelMenu.append(option);
   }
+
+  if (!models.length) {
+    const empty = document.createElement("div");
+    empty.className = "model-menu-empty";
+    empty.textContent = t("modelMenuEmpty");
+    modelMenu.append(empty);
+  }
+}
+
+function openModelMenu(query = "") {
+  if (!availableModels.length) return;
+  renderModelMenu(query);
+  setModelMenuOpen(true);
+}
+
+function closeModelMenu() {
+  setModelMenuOpen(false);
+}
+
+function writeModelOptions(models) {
+  availableModels = [...new Set(models.map((modelId) => String(modelId).trim()).filter(Boolean))];
+  if (modelMenu.hidden === false) renderModelMenu();
 }
 
 async function refreshModelOptions() {
@@ -123,6 +179,7 @@ function writeForm(value) {
   document.querySelector("#targetTimeZone").value = value.targetTimeZone;
   document.querySelector("#defaultSourceTimeZone").value = value.defaultSourceTimeZone;
   provider.value = value.llm.provider;
+  activeProvider = value.llm.provider;
   model.value = value.llm.model;
   endpoint.value = value.llm.endpoint;
   apiKey.value = value.llm.apiKey;
@@ -187,7 +244,19 @@ async function init() {
   writeForm(settings);
 
   provider.addEventListener("change", () => {
-    fillProviderFields(true);
+    const previousProvider = activeProvider;
+    settings.providerProfiles = {
+      ...(settings.providerProfiles || {}),
+      [previousProvider]: {
+        endpoint: endpoint.value.trim(),
+        model: model.value.trim(),
+        apiKey: apiKey.value.trim(),
+      },
+    };
+    activeProvider = provider.value;
+    writeModelOptions([]);
+    closeModelMenu();
+    fillProviderFields();
     scheduleSave();
     void refreshModelOptions();
   });
@@ -195,6 +264,24 @@ async function init() {
     field.addEventListener("input", () => scheduleSave());
     field.addEventListener("blur", () => scheduleSave(0));
   }
+  model.addEventListener("click", () => openModelMenu());
+  model.addEventListener("focus", () => openModelMenu());
+  model.addEventListener("input", () => openModelMenu(model.value));
+  modelMenuToggle.addEventListener("click", () => {
+    if (modelMenu.hidden) openModelMenu();
+    else closeModelMenu();
+  });
+  modelMenu.addEventListener("mousedown", (event) => {
+    const option = event.target.closest("[data-model]");
+    if (!option) return;
+    event.preventDefault();
+    model.value = option.dataset.model;
+    scheduleSave(0);
+    closeModelMenu();
+  });
+  document.addEventListener("mousedown", (event) => {
+    if (!modelField.contains(event.target)) closeModelMenu();
+  });
   customKeywords.addEventListener("input", () => scheduleSave(0));
   customKeywords.addEventListener("blur", () => scheduleSave(0));
   for (const field of [document.querySelector("#targetTimeZone"), document.querySelector("#defaultSourceTimeZone")]) {
@@ -205,7 +292,12 @@ async function init() {
     scheduleSave(0);
   });
   themeToggle.addEventListener("click", () => {
-    applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
+    const nextTheme = themeMode === "system"
+      ? (systemTheme?.matches ? "light" : "dark")
+      : themeMode === "dark"
+        ? "light"
+        : "system";
+    applyTheme(nextTheme);
     scheduleSave(0);
   });
   toggleApiKey.addEventListener("click", () => {
@@ -219,5 +311,10 @@ async function init() {
     if (event.key === "Enter") runTest();
   });
 }
+
+const handleSystemThemeChange = () => {
+  if (themeMode === "system") applyTheme("system");
+};
+systemTheme?.addEventListener?.("change", handleSystemThemeChange);
 
 init();

@@ -2,6 +2,8 @@ import { loadSettings } from "./shared/config.js";
 import { parseStructuredTimeExpression } from "./shared/parser.js";
 import { isTimeCandidate } from "./shared/candidate.js";
 import { requestOpenAICompatibleExtraction } from "./shared/llm.js";
+import { needsReferenceDate } from "./shared/reference.js";
+import { buildReportPayload, postCaseReport } from "./shared/report.js";
 
 function normalizeReferenceContext(value) {
   if (!value || !["gmail_message", "gmail_message_unresolved"].includes(value.kind)) return null;
@@ -16,10 +18,6 @@ function normalizeReferenceContext(value) {
     messageId: String(value.messageId || "").slice(0, 200),
     source: "gmail_message_header",
   };
-}
-
-function hasRelativeDateExpression(text) {
-  return /\b(?:today|yesterday|tomorrow|this|next)\b/i.test(String(text || ""));
 }
 
 function formatReferenceDate(reference, sourceTimeZone, sourceOffsetMinutes) {
@@ -46,7 +44,7 @@ function formatReferenceDate(reference, sourceTimeZone, sourceOffsetMinutes) {
 
 async function resolveText(text, settings, { includeNormalization = false, referenceContext = null } = {}) {
   const context = normalizeReferenceContext(referenceContext);
-  if (context?.kind === "gmail_message_unresolved" && hasRelativeDateExpression(text)) {
+  if (context?.kind === "gmail_message_unresolved" && needsReferenceDate(text)) {
     return {
       ok: false,
       rawText: text,
@@ -80,7 +78,7 @@ async function resolveText(text, settings, { includeNormalization = false, refer
       targetTimeZone: settings.targetTimeZone,
       rawText: text,
     });
-    const relativeReference = context?.kind === "gmail_message" && hasRelativeDateExpression(text);
+    const relativeReference = context?.kind === "gmail_message" && needsReferenceDate(text);
     const resultContext = context
       ? {
           ...context,
@@ -134,6 +132,19 @@ chrome.commands.onCommand.addListener(async (command) => {
 });
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (message.type === "REPORT_CASE") {
+    (async () => {
+      const payload = buildReportPayload({
+        rawText: message.rawText,
+        result: message.result,
+        referenceContext: message.referenceContext,
+        extensionVersion: chrome.runtime.getManifest().version,
+      });
+      sendResponse(await postCaseReport({ payload }));
+    })().catch((error) => sendResponse({ ok: false, reason: error.message }));
+    return true;
+  }
+
   if (message.type === "PARSE_TEXT" || message.type === "TEST_LLM") {
     (async () => {
       const settings = message.settings || (await loadSettings());

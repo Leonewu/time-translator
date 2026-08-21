@@ -9,6 +9,8 @@ test("自动识别接受明确的英文时间格式", () => {
     "next Monday at 17:00 New York",
     "between 2 and 4 pm Pacific time",
     "midnight GMT",
+    "sometime before close of business next Thursday London time",
+    "next Thursday London time",
   ]) {
     assert.equal(isTimeCandidate(text), true, text);
   }

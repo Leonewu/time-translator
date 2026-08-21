@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { parseEnglishTimeExpression } from "../src/shared/parser.js";
+import { parseEnglishTimeExpression, parseStructuredTimeExpression } from "../src/shared/parser.js";
 
 const reference = new Date("2026-08-20T10:00:00.000Z");
 
@@ -16,6 +16,53 @@ test("解析 today before 3 pm UK", () => {
   assert.equal(result.sourceTimeZone, "Europe/London");
   assert.equal(result.localDateTime.hour, 15);
   assert.equal(result.displayText, "2026/08/20（周四）22:00 前");
+});
+
+test("CET 按固定 UTC+1 处理，不受 LLM 返回的地区时区影响", () => {
+  for (const returnedZone of ["Europe/Berlin", "Europe/London"]) {
+    const result = parseStructuredTimeExpression(
+      {
+        status: "ok",
+        start_local: "2026-08-21T12:00:00",
+        end_local: null,
+        source_time_zone: returnedZone,
+        relation: "at",
+        confidence: "high",
+        reason: "",
+        assumptions: [],
+      },
+      {
+        targetTimeZone: "Asia/Shanghai",
+        rawText: "today noon CET time",
+      },
+    );
+
+    assert.equal(result.sourceTimeZone, "UTC+01:00");
+    assert.equal(result.displayText, "2026/08/21（周五）19:00");
+  }
+
+  const localResult = parseEnglishTimeExpression("today noon CET time", {
+    reference: new Date("2026-08-21T00:00:00.000Z"),
+    targetTimeZone: "Asia/Shanghai",
+  });
+  assert.equal(localResult.sourceTimeZone, "UTC+01:00");
+  assert.equal(localResult.displayText, "2026/08/21（周五）19:00");
+
+  const daylightResult = parseStructuredTimeExpression(
+    {
+      status: "ok",
+      start_local: "2026-08-21T12:00:00",
+      end_local: null,
+      source_time_zone: "Europe/London",
+      relation: "at",
+      confidence: "high",
+      reason: "",
+      assumptions: [],
+    },
+    { targetTimeZone: "Asia/Shanghai", rawText: "today noon CEST time" },
+  );
+  assert.equal(daylightResult.sourceTimeZone, "UTC+02:00");
+  assert.equal(daylightResult.displayText, "2026/08/21（周五）18:00");
 });
 
 test("Gmail 邮件时间作为 reference 时，today 使用邮件当地日期", () => {

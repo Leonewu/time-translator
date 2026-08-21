@@ -1,7 +1,8 @@
 export const DEFAULT_SETTINGS = {
   autoConvert: true,
-  theme: "light",
+  theme: "system",
   customKeywords: [],
+  providerProfiles: {},
   targetTimeZone: "Asia/Shanghai",
   defaultSourceTimeZone: "Europe/London",
   llm: {
@@ -25,6 +26,22 @@ export function normalizeCustomKeywords(value) {
     if (normalized.length >= 30) break;
   }
   return normalized;
+}
+
+function normalizeProviderProfile(provider, value = {}) {
+  const preset = PROVIDER_PRESETS[provider] || PROVIDER_PRESETS.custom;
+  return {
+    endpoint: String(value?.endpoint ?? preset.endpoint ?? "").trim(),
+    model: String(value?.model ?? preset.model ?? "").trim(),
+    apiKey: String(value?.apiKey ?? "").trim(),
+  };
+}
+
+export function normalizeProviderProfiles(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return Object.fromEntries(
+    Object.entries(value).map(([provider, profile]) => [provider, normalizeProviderProfile(provider, profile)]),
+  );
 }
 
 export const PROVIDER_PRESETS = {
@@ -64,6 +81,18 @@ export const PROVIDER_PRESETS = {
     model: "YOUR_ENDPOINT_ID",
     hint: "把模型改成你在方舟创建的 Endpoint ID。",
   },
+  gemini: {
+    label: "Google Gemini",
+    endpoint: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+    model: "gemini-3.7-flash",
+    hint: "使用 Gemini 的 OpenAI-compatible 接口；模型名以 Google AI Studio 当前可用列表为准。",
+  },
+  openrouter: {
+    label: "OpenRouter",
+    endpoint: "https://openrouter.ai/api/v1/chat/completions",
+    model: "",
+    hint: "统一 OpenAI-compatible 接口；刷新模型列表后选择模型。",
+  },
   openai: {
     label: "OpenAI-compatible / OpenAI",
     endpoint: "https://api.openai.com/v1/chat/completions",
@@ -82,15 +111,24 @@ function mergeSettings(saved = {}) {
   const { enabled: _legacyEnabled, ...savedLlm } = saved.llm || {};
   const { showAutomatically: _legacyAutoPopup, ...savedWithoutAutoPopup } = saved;
   const { enabled: legacyAutoConvert, ...savedWithoutLegacyEnabled } = savedWithoutAutoPopup;
+  const provider = savedLlm.provider || DEFAULT_SETTINGS.llm.provider;
+  const providerProfiles = normalizeProviderProfiles(saved.providerProfiles);
+  if (!providerProfiles[provider]) {
+    providerProfiles[provider] = normalizeProviderProfile(provider, savedLlm);
+  }
+  const currentProfile = providerProfiles[provider];
   return {
     ...DEFAULT_SETTINGS,
     ...savedWithoutLegacyEnabled,
     autoConvert: saved.autoConvert ?? legacyAutoConvert ?? DEFAULT_SETTINGS.autoConvert,
-    theme: saved.theme === "dark" ? "dark" : DEFAULT_SETTINGS.theme,
+    theme: ["light", "dark", "system"].includes(saved.theme) ? saved.theme : DEFAULT_SETTINGS.theme,
     customKeywords: normalizeCustomKeywords(saved.customKeywords),
+    providerProfiles,
     llm: {
       ...DEFAULT_SETTINGS.llm,
       ...savedLlm,
+      provider,
+      ...currentProfile,
     },
   };
 }

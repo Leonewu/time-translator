@@ -13,6 +13,7 @@ import {
   resolveFixedOffsetDateTime,
   resolveLocalDateTime,
 } from "./time.js";
+import { detectFixedTimeZoneAbbreviation } from "./source-zone.js";
 
 const WEEKDAY_NAMES = {
   sunday: 0,
@@ -118,6 +119,15 @@ function isValidDateParts(date) {
 }
 
 function detectTimeZone(text, defaultSourceTimeZone) {
+  const fixedAbbreviation = detectFixedTimeZoneAbbreviation(text);
+  if (fixedAbbreviation) {
+    return {
+      timeZone: "",
+      label: fixedAbbreviation.token,
+      offsetMinutes: fixedAbbreviation.offsetMinutes,
+      explicit: true,
+    };
+  }
   for (const alias of TIME_ZONE_ALIASES) {
     if (alias.patterns.some((pattern) => pattern.test(text))) {
       return { timeZone: alias.zone, label: alias.label, explicit: true };
@@ -407,17 +417,18 @@ export function parseNormalizedTimeExpression(extraction, options = {}) {
     return normalizedFailure("非时间范围表达不应包含结束时间", extraction, options);
   }
 
+  const fixedAbbreviation = detectFixedTimeZoneAbbreviation(options.rawText);
   const requestedSourceTimeZone = String(extraction.source_time_zone || "").trim();
   const sourceTimeZone = requestedSourceTimeZone
-    ? normalizeTimeZone(requestedSourceTimeZone)
+    ? (fixedAbbreviation ? "" : normalizeTimeZone(requestedSourceTimeZone))
     : "";
-  if (requestedSourceTimeZone && !sourceTimeZone) {
+  if (requestedSourceTimeZone && !sourceTimeZone && !fixedAbbreviation) {
     return normalizedFailure("在线模型返回了无法识别的源时区", extraction, options);
   }
 
   const explicitOffsetInText = detectExplicitOffset(options.rawText);
-  const hasSourceOffset = explicitOffsetInText !== null;
-  const sourceOffsetMinutes = explicitOffsetInText;
+  const hasSourceOffset = fixedAbbreviation !== null || explicitOffsetInText !== null;
+  const sourceOffsetMinutes = fixedAbbreviation?.offsetMinutes ?? explicitOffsetInText;
   if (sourceTimeZone && hasSourceOffset) {
     return normalizedFailure("原文包含固定 UTC 偏移量时不能返回 IANA 时区", extraction, options);
   }
@@ -433,6 +444,9 @@ export function parseNormalizedTimeExpression(extraction, options = {}) {
 
   const assumptions = [
     ...(Array.isArray(extraction.assumptions) ? extraction.assumptions : []),
+    ...(fixedAbbreviation
+      ? ["原文时区缩写 " + fixedAbbreviation.token + " 按固定 " + formatFixedOffsetName(fixedAbbreviation.offsetMinutes) + " 计算"]
+      : []),
     ...(!requestedSourceTimeZone && !hasSourceOffset
       ? [`未写明源时区，使用默认源时区 ${defaultSourceTimeZone}`]
       : []),
@@ -644,6 +658,7 @@ export function parseEnglishTimeExpression(text, options = {}) {
     };
   }
   const zone = detectTimeZone(normalized, defaultSourceTimeZone);
+  const sourceOffsetMinutes = Number.isInteger(zone.offsetMinutes) ? zone.offsetMinutes : null;
   const range = parseRangeTimes(normalized);
   const time = range ? null : parseTimeAt(normalized);
 
@@ -656,20 +671,24 @@ export function parseEnglishTimeExpression(text, options = {}) {
     };
   }
 
-  const dateExpression = parseDateExpression(normalized, reference, zone.timeZone);
+  const dateExpression = parseDateExpression(normalized, reference, zone.timeZone, sourceOffsetMinutes);
   const relation = range ? "between" : detectRelation(normalized);
   const startTime = range?.start || time.time;
   const endTime = range?.end;
   const localDateTime = makeLocalDateTime(dateExpression.date, startTime);
-  const instant = resolveLocalDateTime(localDateTime, zone.timeZone);
+  const instant = sourceOffsetMinutes === null
+    ? resolveLocalDateTime(localDateTime, zone.timeZone)
+    : resolveFixedOffsetDateTime(localDateTime, sourceOffsetMinutes);
   let endInstant = endTime
-    ? resolveLocalDateTime(makeLocalDateTime(dateExpression.date, endTime), zone.timeZone)
+    ? (sourceOffsetMinutes === null
+      ? resolveLocalDateTime(makeLocalDateTime(dateExpression.date, endTime), zone.timeZone)
+      : resolveFixedOffsetDateTime(makeLocalDateTime(dateExpression.date, endTime), sourceOffsetMinutes))
     : null;
   if (endInstant && endInstant <= instant) {
-    endInstant = resolveLocalDateTime(
-      makeLocalDateTime(addDaysToDateParts(dateExpression.date, 1), endTime),
-      zone.timeZone,
-    );
+    const nextDateTime = makeLocalDateTime(addDaysToDateParts(dateExpression.date, 1), endTime);
+    endInstant = sourceOffsetMinutes === null
+      ? resolveLocalDateTime(nextDateTime, zone.timeZone)
+      : resolveFixedOffsetDateTime(nextDateTime, sourceOffsetMinutes);
   }
 
   const assumptions = [];
@@ -681,8 +700,10 @@ export function parseEnglishTimeExpression(text, options = {}) {
   const result = {
     ok: true,
     rawText: text,
-    sourceTimeZone: zone.timeZone,
-    sourceTimeZoneName: formatTimeZoneName(instant, zone.timeZone),
+    sourceTimeZone: sourceOffsetMinutes === null ? zone.timeZone : formatFixedOffsetName(sourceOffsetMinutes),
+    sourceTimeZoneName: sourceOffsetMinutes === null
+      ? formatTimeZoneName(instant, zone.timeZone)
+      : formatFixedOffsetName(sourceOffsetMinutes),
     targetTimeZone,
     dateExpression: dateExpression.expression,
     timeExpression: time?.text || `${formatClock(startTime)}–${formatClock(endTime)}`,

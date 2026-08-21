@@ -21,6 +21,20 @@ test("Popup 在窄容器下保持可用宽度，避免中文逐字换行", () =>
   assert.doesNotMatch(popupCss, /@media \(max-width: 390px\)[\s\S]*body \{ width: 100vw; \}/);
 });
 
+test("Provider 和 Model 分成上下两行，并移除 Endpoint 下方的长说明", () => {
+  assert.match(popupHtml, /class="field-stack"/);
+  assert.match(popupCss, /\.field-stack \{/);
+  assert.doesNotMatch(popupHtml, /id="providerHint"/);
+  assert.doesNotMatch(popupHtml, /class="privacy-note"/);
+  assert.doesNotMatch(popupJs, /providerHint/);
+});
+
+test("下拉框使用留出右侧间距的统一箭头", () => {
+  assert.match(popupCss, /select \{[^}]*appearance:\s*none/);
+  assert.match(popupCss, /select \{[^}]*background-position:\s*right 12px center/);
+  assert.match(popupCss, /select \{[^}]*padding-right:\s*36px/);
+});
+
 test("转换偏好的两列标签使用统一高度，避免英文长标签造成控件错位", () => {
   assert.match(popupCss, /\.compact-block \.field-grid \.field-label \{[^}]*min-height:\s*2\.4em/);
 });
@@ -56,27 +70,47 @@ test("API Key 提供眼睛按钮切换显示和隐藏", () => {
 });
 
 test("Popup 提供可持久化的日间/夜间模式切换", () => {
-  assert.match(popupHtml, /data-theme="light"/);
+  assert.match(popupHtml, /data-theme="system"/);
   assert.match(popupHtml, /id="themeToggle"/);
   assert.match(popupJs, /t\("themeToDark"\)/);
+  assert.match(popupJs, /matchMedia\?\.\("\(prefers-color-scheme: dark\)"\)/);
+  assert.match(popupJs, /themeToSystem/);
+  assert.match(popupJs, /systemTheme\?\.addEventListener/);
   assert.match(popupJs, /document\.documentElement\.dataset\.theme/);
   assert.match(popupJs, /themeToggle\.addEventListener\("click"/);
   assert.match(popupCss, /:root\[data-theme="dark"\]/);
+  assert.match(popupCss, /:root\[data-theme="system"\]/);
 });
 
 test("模型名支持动态候选列表并提供刷新入口", () => {
-  assert.match(popupHtml, /id="model" list="modelOptions"/);
-  assert.match(popupHtml, /id="modelOptions"/);
+  assert.match(popupHtml, /id="model"/);
+  assert.match(popupHtml, /id="modelLabel"/);
+  assert.match(popupHtml, /id="modelMenu"/);
+  assert.match(popupHtml, /id="modelMenuToggle"/);
   assert.match(popupHtml, /id="refreshModels"/);
   assert.match(popupJs, /listAvailableModels/);
   assert.match(popupJs, /refreshModels\.addEventListener\("click"/);
   assert.match(popupJs, /provider\.addEventListener\("change",[\s\S]*refreshModelOptions/);
+  assert.match(popupJs, /model\.addEventListener\("click",[\s\S]*openModelMenu/);
+  assert.match(popupJs, /function openModelMenu/);
 });
 
-test("切换服务商会自动同步对应的 Endpoint 和模型名", () => {
-  assert.match(popupJs, /provider\.addEventListener\("change", \(\) => \{[\s\S]*fillProviderFields\(true\)[\s\S]*scheduleSave\(\)/);
-  assert.match(popupJs, /if \(usePreset \|\| !endpoint\.value\) endpoint\.value = preset\.endpoint/);
-  assert.match(popupJs, /if \(usePreset \|\| !model\.value\) model\.value = preset\.model/);
+test("Popup 提供 Gemini 服务商预置配置", () => {
+  assert.match(i18nSource, /provider_gemini/);
+  assert.match(popupHtml, /id="modelMenu"/);
+});
+
+test("Popup 提供 OpenRouter 服务商预置配置", () => {
+  assert.match(i18nSource, /provider_openrouter/);
+  assert.match(popupHtml, /id="modelMenu"/);
+});
+
+test("切换服务商会保存各自配置并在切回时恢复", () => {
+  assert.match(popupJs, /providerProfiles/);
+  assert.match(popupJs, /const previousProvider = activeProvider/);
+  assert.match(popupJs, /settings\.providerProfiles = \{/);
+  assert.match(popupJs, /fillProviderFields\(\)/);
+  assert.match(popupJs, /const profile = settings\?\.providerProfiles\?\.\[provider\.value\]/);
 });
 
 test("Popup 提供自定义关键词输入框", () => {
@@ -92,13 +126,13 @@ test("Popup 提供自定义关键词输入框", () => {
 test("Popup 提供反馈邮件入口和当前版本号", () => {
   assert.match(popupHtml, /mailto:reon\.hypr@gmail\.com\?subject=Time%20Translator%20Feedback/);
   assert.match(popupHtml, /data-i18n="feedback"/);
-  assert.match(popupHtml, />v0\.1\.6<\/span>/);
+  assert.match(popupHtml, />v0\.1\.8<\/span>/);
   assert.match(popupCss, /\.feedback-link \{[^}]*margin-left:\s*auto/);
-  assert.match(manifest, /"version": "0\.1\.6"/);
+  assert.match(manifest, /"version": "0\.1\.8"/);
 });
 
-test("Popup 明确在线模型只接收选中文本", () => {
-  assert.match(popupHtml, /data-i18n="privacyNote"/);
+test("Popup 不再显示 Endpoint 下方的长隐私说明", () => {
+  assert.doesNotMatch(popupHtml, /class="privacy-note"|data-i18n="privacyNote"/);
 });
 
 test("Popup 和扩展 manifest 使用时区小云朵 logo", () => {

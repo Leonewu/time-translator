@@ -1,7 +1,7 @@
 const NORMALIZATION_SYSTEM_PROMPT = `You normalize short English time expressions into one bounded JSON object.
 Return ONLY JSON, with no markdown and no explanation outside the JSON.
 The extension, not you, will calculate Beijing time. You must resolve the English meaning into a complete local wall-clock timestamp.
-You do not have permission to browse or query the current time. Use the supplied reference instant. Interpret today/tomorrow/yesterday and weekdays in the source time zone.
+You do not have permission to browse or query the current time. Use the supplied reference instant. Interpret today/tomorrow/yesterday and weekdays in the source time zone. If no calendar date is written but a clock time or range is present, use the reference instant's calendar date in the source time zone. Interpret "close of business", "end of business", and "COB" as 17:00 local time when no more specific business hours are given, and record that as an assumption.
 If the text has no concrete clock time, such as "today" alone, return status="not_time".
 If the source is ambiguous, return status="ambiguous". If the expression is outside this contract, return status="unsupported".
 For status="ok", start_local must be exactly YYYY-MM-DDTHH:mm:ss. Use end_local only for a between/from-to range; include its full date too, including a next-day date when needed.
@@ -53,8 +53,8 @@ export const TIME_EXTRACTION_SCHEMA = NORMALIZED_TIME_SCHEMA;
 
 export function buildExtractionPrompt(text, reference, defaultSourceTimeZone, referenceContext = null) {
   const contextLine = referenceContext?.kind === "gmail_message"
-    ? "Reference context: this instant comes from the selected Gmail message timestamp. Resolve today, yesterday, tomorrow, and weekdays relative to this message timestamp, not the current time."
-    : "Reference context: use this supplied instant as the current reference for relative date words.";
+    ? "Reference context: this instant comes from the selected Gmail message timestamp. Resolve today, yesterday, tomorrow, weekdays, and an omitted calendar date relative to this message timestamp, not the current time. Interpret close of business as 17:00 local time if no business hours are given."
+    : "Reference context: use this supplied instant as the current reference for relative date words and for the calendar date when a clock time omits a date. Interpret close of business as 17:00 local time if no business hours are given.";
   return `Reference instant: ${reference.toISOString()}
 Default source time zone when omitted: ${defaultSourceTimeZone}
 ${contextLine}
@@ -92,21 +92,22 @@ export function parseJsonObject(text) {
   }
 }
 
-function requestBody(config, messages, includeJsonMode = true) {
+function requestBody(config, messages, includeJsonMode = true, maxTokens = 512) {
   const body = {
     model: config.model,
     messages,
     temperature: 0,
-    max_tokens: 300,
+    max_tokens: maxTokens,
   };
   if (config.provider === "deepseek" || config.provider === "mimo") {
     body.thinking = { type: "disabled" };
   }
+  if (config.provider === "gemini") body.reasoning_effort = "low";
   if (includeJsonMode) body.response_format = { type: "json_object" };
   return body;
 }
 
-async function postChatCompletion(config, messages, signal) {
+async function postChatCompletion(config, messages, signal, maxTokens = 512) {
   const headers = {
     "Content-Type": "application/json",
   };
@@ -117,7 +118,7 @@ async function postChatCompletion(config, messages, signal) {
     fetch(config.endpoint, {
       method: "POST",
       headers,
-      body: JSON.stringify(requestBody(config, messages, includeJsonMode)),
+      body: JSON.stringify(requestBody(config, messages, includeJsonMode, maxTokens)),
       signal,
     });
 
@@ -129,6 +130,11 @@ async function postChatCompletion(config, messages, signal) {
     throw new Error(payload?.error?.message || payload?.message || `模型请求失败（${response.status}）`);
   }
   return payload;
+}
+
+function wasTruncated(payload) {
+  const finishReason = payload?.choices?.[0]?.finish_reason;
+  return finishReason === "length" || finishReason === "max_tokens";
 }
 
 function assertSecureEndpoint(endpoint) {
@@ -208,7 +214,7 @@ export async function requestOpenAICompatibleExtraction({
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    const response = await postChatCompletion(
+    let response = await postChatCompletion(
       config,
       [
         { role: "system", content: NORMALIZATION_SYSTEM_PROMPT },
@@ -219,6 +225,24 @@ export async function requestOpenAICompatibleExtraction({
       ],
       controller.signal,
     );
+
+    if (wasTruncated(response)) {
+      response = await postChatCompletion(
+        config,
+        [
+          { role: "system", content: NORMALIZATION_SYSTEM_PROMPT },
+          {
+            role: "user",
+            content: buildExtractionPrompt(text, reference, defaultSourceTimeZone, referenceContext),
+          },
+        ],
+        controller.signal,
+        1024,
+      );
+    }
+    if (wasTruncated(response)) {
+      throw new Error("模型输出被截断，请降低模型思考级别或点击重试");
+    }
 
     return parseJsonObject(extractContent(response));
   } catch (error) {

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-theme="light">
+<html lang="en" data-theme="system">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -39,18 +39,20 @@
       <div id="config-form" class="config-form">
         <section class="section-block">
           <div class="section-heading"><span>01</span><strong data-i18n="modelConnection">Model connection</strong></div>
-          <div class="field-grid">
+          <div class="field-stack">
             <label><span class="field-label" data-i18n="provider">Provider</span>
               <select id="provider"></select>
             </label>
-            <label class="model-field"><span class="field-label" data-i18n="model">Model</span>
-              <span class="model-input-row">
-                <input id="model" list="modelOptions" data-i18n-placeholder="modelPlaceholder" placeholder="e.g. qwen-plus" />
+            <div class="model-field">
+              <span id="modelLabel" class="field-label" data-i18n="model">Model</span>
+              <div class="model-input-row">
+                <input id="model" data-i18n-placeholder="modelPlaceholder" placeholder="e.g. qwen-plus" aria-labelledby="modelLabel" aria-autocomplete="list" aria-controls="modelMenu" aria-expanded="false" />
+                <button type="button" id="modelMenuToggle" class="field-action model-menu-toggle" data-i18n-aria-label="modelMenuToggle" data-i18n-title="modelMenuToggle" aria-label="Show available models" title="Show available models" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"/></svg></button>
                 <button type="button" id="refreshModels" class="field-action" data-i18n-aria-label="modelRefresh" data-i18n-title="modelRefresh" aria-label="Refresh available models" title="Refresh available models"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 0 0-14.8-3.9L3 9.5M4 13a8 8 0 0 0 14.8 3.9L21 14.5M3 9.5h5.5M21 14.5h-5.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-              </span>
-              <datalist id="modelOptions"></datalist>
+                <div id="modelMenu" class="model-menu" role="listbox" hidden></div>
+              </div>
               <span id="modelStatus" class="field-note" data-i18n="modelListHint">Enter an API key to refresh the model list.</span>
-            </label>
+            </div>
           </div>
           <label><span class="field-label" data-i18n="apiKey">API key</span>
             <span class="secret-input">
@@ -64,8 +66,6 @@
           <label><span class="field-label" data-i18n="endpoint">Endpoint</span>
             <input id="endpoint" type="url" data-i18n-placeholder="endpointPlaceholder" placeholder="https://.../chat/completions" />
           </label>
-          <p id="providerHint" class="hint"></p>
-          <p class="privacy-note" data-i18n="privacyNote">Requests are sent to your selected model provider only when converting text or refreshing models. The full page is never sent. Your API key stays in this browser.</p>
           <div class="test-block inline-test">
             <div class="test-heading"><strong data-i18n="onlineTest">Online test</strong><em data-i18n="onlineTestNote">Sent to the current model</em></div>
             <div class="test-input-row">
@@ -110,7 +110,7 @@
 
       <footer>
         <span data-i18n="footerKey">API key stays in this browser</span>
-        <span>v0.1.6</span>
+        <span>v0.1.8</span>
         <a class="feedback-link" href="mailto:reon.hypr@gmail.com?subject=Time%20Translator%20Feedback" data-i18n="feedback" data-i18n-aria-label="feedbackAria" aria-label="Send feedback email">Feedback</a>
       </footer>
     </main>

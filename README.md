@@ -36,7 +36,7 @@ Time Translator 是一个 Chrome / Edge Manifest V3 浏览器插件。选中网�
 
 ### 模型由你选择
 
-支持 DeepSeek、小米 MiMo、通义千问、智谱 GLM、Kimi、豆包，以及其他 OpenAI-compatible 接口。
+支持 DeepSeek、小米 MiMo、通义千问、智谱 GLM、Kimi、豆包、Google Gemini、OpenRouter，以及其他 OpenAI-compatible 接口。
 
 填写 API Key 后，可以从服务商动态刷新可用模型；如果服务商不提供模型列表，也可以手动填写模型名。在线测试与模型配置放在同一个 Popup 内，配置完成即可验证。
 
@@ -77,7 +77,7 @@ Popup 底部提供 Feedback 入口，可以直接联系 `reon.hypr@gmail.com` �
 
 ## 当前版本
 
-- `0.1.6`
+- `0.1.8`
 - Popup 支持日间/夜间模式，偏好会自动保存
 - 当前 IP Logo 会以低透明度水印嵌入 Popup 背景，随日间/夜间模式调整
 - 默认目标时区 `Asia/Shanghai`

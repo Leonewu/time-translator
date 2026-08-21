@@ -44,6 +44,18 @@ test("Gmail 上下文会告诉模型 today 相对邮件时间解析", () => {
   assert.match(prompt, /Reference instant: 2026-08-20T23:30:00\.000Z/);
 });
 
+test("模型提示词要求省略日期时使用参考日期，并处理 close of business", () => {
+  const prompt = buildExtractionPrompt(
+    "between 2 and 4 pm Pacific time",
+    new Date("2026-08-20T23:30:00.000Z"),
+    "Europe/London",
+    { kind: "gmail_message", referenceInstant: "2026-08-20T23:30:00.000Z" },
+  );
+
+  assert.match(prompt, /omitted calendar date/);
+  assert.match(prompt, /close of business/);
+});
+
 test("标准化 LLM 结果只提供完整当地时间，插件负责时区换算", () => {
   const result = parseStructuredTimeExpression(
     {
@@ -318,6 +330,69 @@ test("OpenAI-compatible provider 可以解析 JSON response", async () => {
   }
 });
 
+test("Gemini 输出被 length 截断时自动重试并降低思考级别", async () => {
+  const originalFetch = globalThis.fetch;
+  const requests = [];
+  globalThis.fetch = async (_url, init) => {
+    const body = JSON.parse(init.body);
+    requests.push(body);
+    const content = requests.length === 1
+      ? '{"status":"ok","start_local":"202'
+      : '{"status":"ok","start_local":"2026-08-20T15:00:00","end_local":null,"source_time_zone":"Europe/London","relation":"before","confidence":"high","reason":"","assumptions":[]}';
+    return new Response(JSON.stringify({
+      choices: [{ finish_reason: requests.length === 1 ? "length" : "stop", message: { content } }],
+    }), { status: 200, headers: { "content-type": "application/json" } });
+  };
+
+  try {
+    const result = await requestOpenAICompatibleExtraction({
+      config: {
+        provider: "gemini",
+        endpoint: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+        model: "gemini-3.7-flash",
+        apiKey: "gemini-key",
+      },
+      text: "today at 3 pm UK",
+    });
+    assert.equal(result.start_local, "2026-08-20T15:00:00");
+    assert.equal(requests.length, 2);
+    assert.equal(requests[0].reasoning_effort, "low");
+    assert.equal(requests[0].max_tokens, 512);
+    assert.equal(requests[1].max_tokens, 1024);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("Gemini 连续被 length 截断时返回明确错误", async () => {
+  const originalFetch = globalThis.fetch;
+  let requestCount = 0;
+  globalThis.fetch = async () => {
+    requestCount += 1;
+    return new Response(JSON.stringify({
+      choices: [{ finish_reason: "length", message: { content: '{"status":"ok","start_local":"202' } }],
+    }), { status: 200, headers: { "content-type": "application/json" } });
+  };
+
+  try {
+    await assert.rejects(
+      requestOpenAICompatibleExtraction({
+        config: {
+          provider: "gemini",
+          endpoint: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+          model: "gemini-3.7-flash",
+          apiKey: "gemini-key",
+        },
+        text: "today at 3 pm UK",
+      }),
+      /输出被截断/,
+    );
+    assert.equal(requestCount, 2);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("在线模型 Endpoint 必须使用 HTTPS", async () => {
   await assert.rejects(
     requestOpenAICompatibleExtraction({
@@ -353,6 +428,29 @@ test("动态模型列表读取 data.id，并按服务商使用对应 API Key 请
     assert.equal(request.url, "https://api.xiaomimimo.com/v1/models");
     assert.equal(request.headers["api-key"], "mimo-key");
     assert.equal(request.headers.Authorization, undefined);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("OpenRouter 动态模型列表使用 Bearer API Key", async () => {
+  const originalFetch = globalThis.fetch;
+  let request;
+  globalThis.fetch = async (url, init) => {
+    request = { url, headers: init.headers };
+    return new Response(JSON.stringify({ data: [{ id: "google/gemini-2.5-flash" }] }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+  };
+
+  try {
+    const models = await listAvailableModels({
+      config: { provider: "openrouter", endpoint: "https://openrouter.ai/api/v1/chat/completions", apiKey: "or-key" },
+    });
+    assert.deepEqual(models, ["google/gemini-2.5-flash"]);
+    assert.equal(request.url, "https://openrouter.ai/api/v1/models");
+    assert.equal(request.headers.Authorization, "Bearer or-key");
   } finally {
     globalThis.fetch = originalFetch;
   }
