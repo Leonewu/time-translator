@@ -165,7 +165,10 @@ async function refreshModelOptions() {
     writeModelOptions(models);
     setModelStatus(t("modelFound", { count: models.length }), "ready");
   } catch (error) {
-    setModelStatus(error.message || "暂时无法读取模型列表，可继续手动填写模型名。", "error");
+    const message = error.code === "region_restricted"
+      ? t("regionRestricted")
+      : error.message || "暂时无法读取模型列表，可继续手动填写模型名。";
+    setModelStatus(message, "error");
   } finally {
     refreshModels.disabled = false;
     refreshModels.classList.remove("is-loading");

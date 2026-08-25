@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { parseStructuredTimeExpression } from "../src/shared/parser.js";
-import { buildExtractionPrompt, getModelListEndpoint, listAvailableModels, parseJsonObject, requestOpenAICompatibleExtraction } from "../src/shared/llm.js";
+import { buildExtractionPrompt, classifyProviderError, getModelListEndpoint, listAvailableModels, parseJsonObject, requestOpenAICompatibleExtraction } from "../src/shared/llm.js";
 
 test("从 markdown 包裹的 JSON 中提取结构化结果", () => {
   assert.deepEqual(parseJsonObject('```json\n{"relation":"before"}\n```'), {
@@ -325,6 +325,63 @@ test("OpenAI-compatible provider 可以解析 JSON response", async () => {
     });
 
     assert.equal(result.start_local, "2026-08-20T15:00:00");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("明确的地区限制错误会被识别，但普通 403 不会误判", () => {
+  assert.equal(
+    classifyProviderError(403, { error: { message: "User location is not supported for the API use" } }),
+    "region_restricted",
+  );
+  assert.equal(
+    classifyProviderError(400, { error: { status: "FAILED_PRECONDITION", message: "Free tier is not available in your country" } }),
+    "region_restricted",
+  );
+  assert.equal(
+    classifyProviderError(403, { error: { message: "Your API key does not have permission for this resource" } }),
+    "provider_error",
+  );
+  assert.equal(
+    classifyProviderError(401, { error: { message: "Invalid API key" } }),
+    "provider_error",
+  );
+});
+
+test("Gemini 顶层数组包裹 error 时仍能识别地区限制", () => {
+  assert.equal(
+    classifyProviderError(400, [{
+      error: {
+        code: 400,
+        message: "User location is not supported for the API use.",
+        status: "FAILED_PRECONDITION",
+      },
+    }]),
+    "region_restricted",
+  );
+});
+
+test("地区限制的 400 不会因为 JSON mode 再发一次请求", async () => {
+  const originalFetch = globalThis.fetch;
+  let requestCount = 0;
+  globalThis.fetch = async () => {
+    requestCount += 1;
+    return new Response(JSON.stringify({ error: { message: "User location is not supported for the API use" } }), {
+      status: 400,
+      headers: { "content-type": "application/json" },
+    });
+  };
+
+  try {
+    await assert.rejects(
+      requestOpenAICompatibleExtraction({
+        config: { endpoint: "https://example.test/chat/completions", model: "test", apiKey: "key" },
+        text: "today at 3 pm UK",
+      }),
+      (error) => error.code === "region_restricted" && /location is not supported/.test(error.message),
+    );
+    assert.equal(requestCount, 1);
   } finally {
     globalThis.fetch = originalFetch;
   }

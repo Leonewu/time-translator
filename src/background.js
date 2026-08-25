@@ -4,6 +4,7 @@ import { isTimeCandidate } from "./shared/candidate.js";
 import { requestOpenAICompatibleExtraction } from "./shared/llm.js";
 import { needsReferenceDate } from "./shared/reference.js";
 import { buildReportPayload, postCaseReport } from "./shared/report.js";
+import { getMessage } from "./shared/i18n.js";
 
 function normalizeReferenceContext(value) {
   if (!value || !["gmail_message", "gmail_message_unresolved"].includes(value.kind)) return null;
@@ -98,12 +99,16 @@ async function resolveText(text, settings, { includeNormalization = false, refer
     }
     return includeNormalization ? { ...result, llmNormalization: extraction } : result;
   } catch (error) {
+    const reason = error.code === "region_restricted"
+      ? getMessage("regionRestricted")
+      : `在线模型解析失败：${error.message}`;
     return {
       ok: false,
       rawText: text,
       engine: `在线模型 · ${settings.llm.provider}`,
       error: error.message,
-      reason: `在线模型解析失败：${error.message}`,
+      reason,
+      ...(error.code ? { errorCode: error.code } : {}),
       ...(context ? { referenceContext: context } : {}),
     };
   }

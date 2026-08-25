@@ -107,6 +107,41 @@ function requestBody(config, messages, includeJsonMode = true, maxTokens = 512) 
   return body;
 }
 
+function providerErrorText(payload) {
+  const entries = Array.isArray(payload) ? payload : [payload];
+  return entries.map((entry) => {
+    const details = Array.isArray(entry?.error?.details)
+      ? entry.error.details.map((detail) => detail?.reason || detail?.message || detail).join(" ")
+      : "";
+    return [
+      entry?.error?.message,
+      entry?.message,
+      entry?.error?.status,
+      entry?.error?.code,
+      entry?.status,
+      entry?.code,
+      details,
+    ].filter(Boolean).join(" ");
+  }).filter(Boolean).join(" ");
+}
+
+export function classifyProviderError(status, payload = {}) {
+  const text = providerErrorText(payload);
+  if (![400, 403, 451].includes(Number(status))) return "provider_error";
+  return /(?:user\s+)?location\s+(?:is\s+)?not\s+supported|unsupported\s+(?:region|country|location)|(?:region|country|location)\s+(?:is\s+)?not\s+supported|not\s+available\s+in\s+(?:your\s+)?(?:region|country|location)|access\s+restricted|free\s+tier.*(?:country|region)|(?:country|region).*free\s+tier|geograph(?:ic|ical)|地区|区域|国家|位置.*不支持|不支持.*(?:地区|区域|国家|位置)/i.test(text)
+    ? "region_restricted"
+    : "provider_error";
+}
+
+function createProviderError(status, payload, fallback) {
+  const message = providerErrorText(payload) || fallback;
+  const error = new Error(message);
+  error.code = classifyProviderError(status, payload);
+  error.httpStatus = Number(status) || 0;
+  error.providerMessage = message;
+  return error;
+}
+
 async function postChatCompletion(config, messages, signal, maxTokens = 512) {
   const headers = {
     "Content-Type": "application/json",
@@ -123,11 +158,13 @@ async function postChatCompletion(config, messages, signal, maxTokens = 512) {
     });
 
   let response = await request(true);
-  if (!response.ok && response.status === 400) response = await request(false);
-
-  const payload = await response.json().catch(() => ({}));
+  let payload = await response.json().catch(() => ({}));
+  if (!response.ok && response.status === 400 && classifyProviderError(response.status, payload) !== "region_restricted") {
+    response = await request(false);
+    payload = await response.json().catch(() => ({}));
+  }
   if (!response.ok) {
-    throw new Error(payload?.error?.message || payload?.message || `模型请求失败（${response.status}）`);
+    throw createProviderError(response.status, payload, `模型请求失败（${response.status}）`);
   }
   return payload;
 }
@@ -183,7 +220,7 @@ export async function listAvailableModels({ config, timeoutMs = 8000 }) {
     });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) {
-      throw new Error(payload?.error?.message || payload?.message || `获取模型列表失败（${response.status}）`);
+      throw createProviderError(response.status, payload, `获取模型列表失败（${response.status}）`);
     }
     const items = Array.isArray(payload?.data) ? payload.data : Array.isArray(payload?.models) ? payload.models : [];
     const models = [...new Set(items.map((item) => (typeof item === "string" ? item : item?.id)).filter(Boolean))];
@@ -253,4 +290,4 @@ export async function requestOpenAICompatibleExtraction({
   }
 }
 
-export const llmInternals = { extractContent, requestBody, authHeaders };
+export const llmInternals = { extractContent, requestBody, authHeaders, providerErrorText, createProviderError };
