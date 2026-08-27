@@ -115,10 +115,19 @@ async function resolveText(text, settings, { includeNormalization = false, refer
 }
 
 chrome.runtime.onInstalled.addListener(() => {
-  chrome.contextMenus.create({
-    id: "convert-selection",
-    title: "检测并转换时间",
-    contexts: ["selection"],
+  chrome.contextMenus.remove("convert-selection", () => {
+    // The menu may not exist on first install; reading lastError prevents
+    // Chrome from reporting that expected cleanup as an uncaught error.
+    void chrome.runtime.lastError;
+    chrome.contextMenus.create({
+      id: "convert-selection",
+      title: "检测并转换时间",
+      contexts: ["selection"],
+    }, () => {
+      if (chrome.runtime.lastError) {
+        console.warn("Time Translator: unable to register context menu", chrome.runtime.lastError.message);
+      }
+    });
   });
 });
 
