@@ -38,6 +38,15 @@ test("自动解析只在释放鼠标后调度，拖选期间的 selectionchange 
   assert.doesNotMatch(selectionChangeBlock, /scheduleSelectionParse\(\)/);
 });
 
+test("自动转换只接受真实拖选，并跳过编辑器内的选区", () => {
+  assert.match(contentSource, /document\.addEventListener\("pointerdown", handlePointerDown, true\)/);
+  assert.match(contentSource, /document\.addEventListener\("pointermove", handlePointerMove, true\)/);
+  assert.match(contentSource, /POINTER_MOVE_THRESHOLD/);
+  assert.match(contentSource, /isSameSelection/);
+  assert.match(contentSource, /isEditable/);
+  assert.match(contentSource, /if \(info\.isEditable\) return/);
+});
+
 test("成功 Tooltip 两侧显示各自时区，主文本使用轻量字重", () => {
   assert.match(contentSource, /class="zone"/);
   assert.match(contentSource, /formatSourceZone\(result\)/);

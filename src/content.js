@@ -12,6 +12,10 @@ let currentReferenceContext = null;
 let reportCaseKey = "";
 let reportState = "idle";
 let reportError = "";
+let pointerGesture = null;
+let pendingSelectionSnapshot = null;
+
+const POINTER_MOVE_THRESHOLD = 4;
 
 const explicitTwelveHourTime = /\b(?:0?[1-9]|1[0-2])(?::[0-5]\d)?\s*(?:a\.?m\.?|p\.?m\.?)\b/i;
 const explicitTwentyFourHourTime = /\b(?:[01]?\d|2[0-3]):[0-5]\d\b/;
@@ -108,28 +112,96 @@ function getSelectionInfo() {
   const text = selection?.toString().trim() || "";
   if (!text || !selection?.rangeCount) return null;
   const range = selection.getRangeAt(0);
+  const selectionSnapshot = getSelectionSnapshot(selection);
   const rect = range.getBoundingClientRect();
   const gmail = globalThis.TimeTranslatorGmail;
   const onGmail = gmail?.isGmailWebPage?.() === true;
   const referenceContext = gmail?.extractMessageContext(range.startContainer) || (onGmail
     ? { kind: "gmail_message_unresolved", source: "gmail_page" }
     : null);
-  return { text, rect, referenceContext };
+  const isEditable = isEditableNode(range.startContainer) || isEditableNode(range.endContainer);
+  return { text, rect, referenceContext, selection: selectionSnapshot, isEditable };
+}
+
+function getSelectionSnapshot(selection = window.getSelection()) {
+  if (!selection) return null;
+  return {
+    anchorNode: selection.anchorNode,
+    anchorOffset: selection.anchorOffset,
+    focusNode: selection.focusNode,
+    focusOffset: selection.focusOffset,
+  };
+}
+
+function isSameSelection(left, right) {
+  return Boolean(left && right)
+    && left.anchorNode === right.anchorNode
+    && left.anchorOffset === right.anchorOffset
+    && left.focusNode === right.focusNode
+    && left.focusOffset === right.focusOffset;
+}
+
+function isEditableNode(node) {
+  let element = node?.nodeType === 1 ? node : node?.parentElement;
+  while (element) {
+    const tagName = String(element.tagName || "").toUpperCase();
+    if (tagName === "INPUT" || tagName === "TEXTAREA") return true;
+    if (element.hasAttribute?.("contenteditable")) {
+      return element.getAttribute("contenteditable")?.toLowerCase() !== "false";
+    }
+    element = element.parentElement;
+  }
+  return false;
 }
 
 function scheduleSelectionParse() {
   clearTimeout(selectionTimer);
   selectionTimer = setTimeout(() => {
     selectionTimer = null;
+    const expectedSelection = pendingSelectionSnapshot;
+    pendingSelectionSnapshot = null;
     const info = getSelectionInfo();
     if (!info) return;
+    if (info.isEditable) return;
+    if (expectedSelection && !isSameSelection(info.selection, expectedSelection)) return;
     if (!isTimeCandidate(info.text) || (currentText === info.text && tooltipHost?.style.display !== "none")) return;
     renderAndParse(info);
   }, 90);
 }
 
+function handlePointerDown(event) {
+  if (event.button !== 0 || (tooltipHost && event.composedPath().includes(tooltipHost))) {
+    pointerGesture = null;
+    return;
+  }
+  pointerGesture = {
+    pointerId: event.pointerId,
+    x: event.clientX,
+    y: event.clientY,
+    moved: false,
+    selection: getSelectionSnapshot(),
+  };
+}
+
+function handlePointerMove(event) {
+  if (!pointerGesture || pointerGesture.pointerId !== event.pointerId || !(event.buttons & 1)) return;
+  const distance = Math.hypot(event.clientX - pointerGesture.x, event.clientY - pointerGesture.y);
+  if (distance >= POINTER_MOVE_THRESHOLD) pointerGesture.moved = true;
+}
+
 function handleSelectionRelease(event) {
-  if (tooltipHost && event.composedPath().includes(tooltipHost)) return;
+  if (tooltipHost && event.composedPath().includes(tooltipHost)) {
+    pointerGesture = null;
+    pendingSelectionSnapshot = null;
+    return;
+  }
+  if (event.type === "mouseup" && pointerGesture) return;
+  const gesture = pointerGesture;
+  pointerGesture = null;
+  if (!gesture?.moved) return;
+  const info = getSelectionInfo();
+  if (!info || info.isEditable || isSameSelection(info.selection, gesture.selection)) return;
+  pendingSelectionSnapshot = info.selection;
   scheduleSelectionParse();
 }
 
@@ -385,7 +457,7 @@ function formatTargetZone(result) {
 }
 
 function renderAndParse(info, force = false) {
-  if (!info || (!force && (!autoConvert || !isTimeCandidate(info.text)))) return;
+  if (!info || (!force && (!autoConvert || info.isEditable || !isTimeCandidate(info.text)))) return;
   if (dismissedSelection && info.text === dismissedSelection.text && Date.now() - dismissedSelection.at < 1200) return;
   if (!dismissedSelection || info.text !== dismissedSelection.text || force) dismissedSelection = null;
   if (!isExtensionContextValid()) {
@@ -413,11 +485,14 @@ function renderAndParse(info, force = false) {
   });
 }
 
+document.addEventListener("pointerdown", handlePointerDown, true);
+document.addEventListener("pointermove", handlePointerMove, true);
 document.addEventListener("pointerup", handleSelectionRelease, true);
 document.addEventListener("mouseup", handleSelectionRelease, true);
 
 document.addEventListener("keyup", (event) => {
   if (event.key === "Shift" || event.key === "Alt" || event.key === "Control") {
+    pendingSelectionSnapshot = null;
     scheduleSelectionParse();
   }
 });
