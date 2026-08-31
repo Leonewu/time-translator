@@ -127,13 +127,27 @@ test("成功转换后的 Tooltip 提供接案順心!按钮和 Canvas 蓄力彩�
 test("VIP 彩蛋支持十秒十次点击，长按复用普通蓄力彩带", () => {
   assert.match(contentSource, /const CELEBRATION_CLICK_LIMIT = 10/);
   assert.match(contentSource, /const CELEBRATION_CLICK_WINDOW_MS = 10_000/);
+  assert.match(contentSource, /const CELEBRATION_COMBO_IDLE_MS = 3_000/);
   assert.doesNotMatch(contentSource, /CELEBRATION_HOLD_EASTER_EGG_MS/);
   assert.match(contentSource, /function getHeartShape/);
   assert.match(contentSource, /shapeFromText\(\{ text: "♥"/);
   assert.match(contentSource, /const heartShapes = new Map\(\)/);
   assert.match(contentSource, /function triggerHeartCelebration/);
   assert.match(contentSource, /getHeartShape\(heartColor\)/);
-  assert.match(contentSource, /textContent = "♥ emma~"/);
+  assert.match(contentSource, /const CLICK_EASTER_EGG_MESSAGES = \["🧩 emma~", "Stay lovely!", "Be happy!", "Stay cozy!", "Be carefree!"\]/);
+  assert.match(contentSource, /let clickEasterEggMessageIndex = 0/);
+  assert.match(contentSource, /message\.textContent = text/);
+  assert.match(contentSource, /function consumeClickEasterEggMessage/);
+  assert.match(contentSource, /clickEasterEggMessageIndex = \(clickEasterEggMessageIndex \+ 1\) % CLICK_EASTER_EGG_MESSAGES\.length/);
+  assert.match(contentSource, /triggerHeartCelebration\(button, \{ messageText: consumeClickEasterEggMessage\(\) \}\)/);
+  assert.match(contentSource, /const comboTransparencyTimers = new WeakMap\(\)/);
+  assert.match(contentSource, /function activateComboTransparency/);
+  assert.match(contentSource, /card\.classList\.add\("is-combo-celebrating"\)/);
+  assert.match(contentSource, /\.card\.is-combo-celebrating \{[^}]*background: rgba\(255, 255, 255, \.58\)/);
+  assert.match(contentSource, /\.card\.is-combo-celebrating > \.toolbar > :not\(\.celebrate\) \{ opacity: \.44/);
+  assert.match(contentSource, /\.card\.is-combo-celebrating \.celebrate \{ opacity: 1/);
+  assert.match(contentSource, /const previousClickAt = clickTimes\.at\(-1\) \|\| 0/);
+  assert.match(contentSource, /if \(previousClickAt && now - previousClickAt <= CELEBRATION_COMBO_IDLE_MS\) activateComboTransparency\(button\)/);
   assert.match(contentSource, /function recordCelebrationClick/);
   assert.match(contentSource, /const celebrationClickStates = new WeakMap\(\)/);
   assert.match(contentSource, /const clickTimes = \(celebrationClickStates\.get\(button\) \|\| \[\]\)/);
@@ -156,7 +170,7 @@ test("长按超过 1 秒先倾斜颤抖，松手后恢复普通蓄力彩带并�
   assert.match(contentSource, /@keyframes celebrate-charge-wiggle/);
   assert.match(contentSource, /const holdDuration = pendingHoldDuration \|\| 0/);
   assert.match(contentSource, /const isLongPress = holdDuration >= CELEBRATION_SHAKE_THRESHOLD_MS/);
-  assert.match(contentSource, /if \(isLongPress\) \{[\s\S]*triggerCelebration\(celebrateButton, holdDuration\);[\s\S]*showEasterEggMessage\(celebrateButton, \{ color: "#7c5cfc", shadowColor: "rgba\(124, 92, 252, \.36\)" \}\);[\s\S]*return;/);
+  assert.match(contentSource, /if \(isLongPress\) \{[\s\S]*triggerCelebration\(celebrateButton, holdDuration\);[\s\S]*showEasterEggMessage\(celebrateButton, \{ color: "#7c5cfc", shadowColor: "rgba\(124, 92, 252, \.36\)", text: "🧩 emma~" \}\);[\s\S]*return;/);
   assert.match(contentSource, /if \(!isClickEasterEgg\) triggerCelebration\(celebrateButton, holdDuration\)/);
   assert.doesNotMatch(contentSource, /LONG_HOLD_HEART_COLORS|fallingMessage|getFallingMessageShape|isLongPressEasterEgg|pendingLongPress|longPressReady/);
   const startShakeTimerBlock = contentSource.match(/const startShakeTimer = \(\) => \{[\s\S]*?\n    \};/)?.[0] || "";

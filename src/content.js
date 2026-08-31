@@ -24,13 +24,17 @@ let magicCode = "";
 const POINTER_MOVE_THRESHOLD = 4;
 const CELEBRATION_COLORS = ["#7c5cfc", "#a97cff", "#d48bff", "#4d427f", "#ffbd32"];
 const HEART_CELEBRATION_COLORS = ["#ef5b8b", "#ff79a8", "#d48bff", "#a97cff", "#ffbd32"];
+const CLICK_EASTER_EGG_MESSAGES = ["🧩 emma~", "Stay lovely!", "Be happy!", "Stay cozy!", "Be carefree!"];
 const CELEBRATION_CLICK_LIMIT = 10;
 const CELEBRATION_CLICK_WINDOW_MS = 10_000;
+const CELEBRATION_COMBO_IDLE_MS = 3_000;
 const CELEBRATION_SHAKE_THRESHOLD_MS = 1_000;
 let confettiCanvas = null;
 let confettiInstance = null;
 const heartShapes = new Map();
 const celebrationClickStates = new WeakMap();
+const comboTransparencyTimers = new WeakMap();
+let clickEasterEggMessageIndex = 0;
 
 const explicitTwelveHourTime = /\b(?:0?[1-9]|1[0-2])(?::[0-5]\d)?\s*(?:a\.?m\.?|p\.?m\.?)\b/i;
 const explicitTwentyFourHourTime = /\b(?:[01]?\d|2[0-3]):[0-5]\d\b/;
@@ -324,6 +328,7 @@ function tooltipStyles() {
       padding: 8px 11px 7px;
       font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       box-shadow: 0 8px 22px rgba(26, 32, 44, .18), 0 2px 4px rgba(26, 32, 44, .08);
+      transition: background-color .45s ease, box-shadow .45s ease;
     }
     .card::after {
       content: "";
@@ -337,6 +342,11 @@ function tooltipStyles() {
     }
     :host([data-placement="top"]) .card::after { bottom: -8px; }
     :host([data-placement="bottom"]) .card::after { top: -8px; transform: translateX(-50%) rotate(180deg); }
+    .card > .flow, .card > .details, .card > .toolbar > :not(.celebrate) { transition: opacity .45s ease; }
+    .card.is-combo-celebrating { -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); background: rgba(255, 255, 255, .58); box-shadow: 0 8px 22px rgba(26, 32, 44, .1), 0 2px 4px rgba(26, 32, 44, .05); }
+    .card.is-combo-celebrating::after { background: rgba(255, 255, 255, .58); }
+    .card.is-combo-celebrating > .flow, .card.is-combo-celebrating > .details, .card.is-combo-celebrating > .toolbar > :not(.celebrate) { opacity: .44; }
+    .card.is-combo-celebrating .celebrate { opacity: 1; }
     .flow { align-items: start; display: grid; gap: 6px; grid-template-columns: minmax(0, 1fr) auto max-content; }
     .side { align-self: start; min-width: 0; }
     .target-side { align-items: flex-end; display: flex; flex-direction: column; }
@@ -470,13 +480,13 @@ function getCelebrationOrigin(button) {
   };
 }
 
-function showEasterEggMessage(button, { color = "#ef5b8b", shadowColor = "rgba(239, 91, 139, .24)" } = {}) {
+function showEasterEggMessage(button, { color = "#ef5b8b", shadowColor = "rgba(239, 91, 139, .24)", text = "♥ emma~" } = {}) {
   const card = button.closest(".card") || button.getRootNode?.().querySelector?.(".card");
   const layer = card?.querySelector(".celebration-layer");
   if (!card || !layer) return;
   const message = document.createElement("span");
   message.className = "celebration-message";
-  message.textContent = "♥ emma~";
+  message.textContent = text;
   message.style.color = color;
   message.style.textShadow = `0 2px 8px ${shadowColor}`;
   message.setAttribute("aria-hidden", "true");
@@ -484,7 +494,20 @@ function showEasterEggMessage(button, { color = "#ef5b8b", shadowColor = "rgba(2
   setTimeout(() => message.remove(), 1900);
 }
 
-function triggerHeartCelebration(button, { colors = HEART_CELEBRATION_COLORS, heartColor = "#ef5b8b" } = {}) {
+function activateComboTransparency(button) {
+  const card = button.closest(".card") || button.getRootNode?.().querySelector?.(".card");
+  if (!card) return;
+  const previousTimer = comboTransparencyTimers.get(card);
+  if (previousTimer) clearTimeout(previousTimer);
+  card.classList.add("is-combo-celebrating");
+  const timer = setTimeout(() => {
+    card.classList.remove("is-combo-celebrating");
+    comboTransparencyTimers.delete(card);
+  }, CELEBRATION_COMBO_IDLE_MS);
+  comboTransparencyTimers.set(card, timer);
+}
+
+function triggerHeartCelebration(button, { colors = HEART_CELEBRATION_COLORS, heartColor = "#ef5b8b", messageText = "♥ emma~" } = {}) {
   const origin = getCelebrationOrigin(button);
   const shoot = getConfettiInstance();
   const heart = getHeartShape(heartColor);
@@ -504,20 +527,28 @@ function triggerHeartCelebration(button, { colors = HEART_CELEBRATION_COLORS, he
     startVelocity: 38,
     ticks: 190,
   });
-  showEasterEggMessage(button);
+  showEasterEggMessage(button, { text: messageText });
+}
+
+function consumeClickEasterEggMessage() {
+  const message = CLICK_EASTER_EGG_MESSAGES[clickEasterEggMessageIndex];
+  clickEasterEggMessageIndex = (clickEasterEggMessageIndex + 1) % CLICK_EASTER_EGG_MESSAGES.length;
+  return message;
 }
 
 function recordCelebrationClick(button) {
   const now = Date.now();
   const clickTimes = (celebrationClickStates.get(button) || [])
     .filter((timestamp) => now - timestamp < CELEBRATION_CLICK_WINDOW_MS);
+  const previousClickAt = clickTimes.at(-1) || 0;
   clickTimes.push(now);
+  if (previousClickAt && now - previousClickAt <= CELEBRATION_COMBO_IDLE_MS) activateComboTransparency(button);
   if (clickTimes.length < CELEBRATION_CLICK_LIMIT) {
     celebrationClickStates.set(button, clickTimes);
     return false;
   }
   celebrationClickStates.delete(button);
-  triggerHeartCelebration(button);
+  triggerHeartCelebration(button, { messageText: consumeClickEasterEggMessage() });
   return true;
 }
 
@@ -715,7 +746,7 @@ function renderResult(result, text, rect) {
       const isLongPress = holdDuration >= CELEBRATION_SHAKE_THRESHOLD_MS;
       if (isLongPress) {
         triggerCelebration(celebrateButton, holdDuration);
-        showEasterEggMessage(celebrateButton, { color: "#7c5cfc", shadowColor: "rgba(124, 92, 252, .36)" });
+        showEasterEggMessage(celebrateButton, { color: "#7c5cfc", shadowColor: "rgba(124, 92, 252, .36)", text: "🧩 emma~" });
         return;
       }
       const isClickEasterEgg = recordCelebrationClick(celebrateButton);
