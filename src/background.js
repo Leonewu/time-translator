@@ -5,9 +5,35 @@ import { requestOpenAICompatibleExtraction } from "./shared/llm.js";
 import { needsReferenceDate } from "./shared/reference.js";
 import { buildReportPayload, postCaseReport } from "./shared/report.js";
 import { getMessage } from "./shared/i18n.js";
-import { getAnonymousInstallId } from "./shared/install-id.js";
+import { getAnonymousInstallId, getInstallId, isVipInstallId } from "./shared/install-id.js";
 
 void getAnonymousInstallId().catch((error) => console.warn("Time Translator: unable to create anonymous ID", error));
+
+const DEFAULT_ACTION_ICON = {
+  16: "src/assets/icon-16.png",
+  32: "src/assets/icon-32.png",
+};
+const VIP_ACTION_ICON = {
+  16: "src/assets/vip-a2-16.png",
+  32: "src/assets/vip-a2-32.png",
+};
+
+async function updateActionIcon(value) {
+  if (!chrome.action?.setIcon) return;
+  try {
+    await chrome.action.setIcon({ path: isVipInstallId(value) ? VIP_ACTION_ICON : DEFAULT_ACTION_ICON });
+  } catch (error) {
+    console.warn("Time Translator: unable to update action icon", error);
+  }
+}
+
+void getInstallId().then(updateActionIcon).catch(() => updateActionIcon(""));
+
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName === "local" && changes.installId) {
+    void updateActionIcon(changes.installId.newValue);
+  }
+});
 
 function normalizeReferenceContext(value) {
   if (!value || !["gmail_message", "gmail_message_unresolved"].includes(value.kind)) return null;
@@ -155,6 +181,8 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         rawText: message.rawText,
         result: message.result,
         referenceContext: message.referenceContext,
+        anonymousInstallId: message.anonymousInstallId,
+        magicCode: message.magicCode,
         extensionVersion: chrome.runtime.getManifest().version,
       });
       sendResponse(await postCaseReport({ payload }));

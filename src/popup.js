@@ -26,10 +26,14 @@ const testResult = document.querySelector("#testResult");
 const testJson = document.querySelector("#testJson");
 const installIdValue = document.querySelector("#installIdValue");
 const vipBadge = document.querySelector("#vipBadge");
+const brandLogo = document.querySelector(".brand-logo");
 const systemTheme = globalThis.matchMedia?.("(prefers-color-scheme: dark)");
 let settings;
 let saveTimer;
 let availableModels = [];
+const modelCatalogCache = new Map();
+const modelCatalogRequests = new Map();
+let modelMenuLoading = false;
 let themeMode = "system";
 let activeProvider = "";
 let installIdSaveTimer;
@@ -121,12 +125,27 @@ function setModelMenuOpen(open) {
   model.setAttribute("aria-expanded", String(open));
 }
 
+function normalizeModelSearchText(value) {
+  return String(value || "").toLocaleLowerCase().replace(/[\s._/-]+/g, "");
+}
+
+function matchesModelQuery(modelId, query) {
+  const normalizedQuery = normalizeModelSearchText(query);
+  if (!normalizedQuery) return true;
+  const normalizedModelId = normalizeModelSearchText(modelId);
+  if (normalizedModelId.includes(normalizedQuery)) return true;
+
+  let queryIndex = 0;
+  for (const character of normalizedModelId) {
+    if (character === normalizedQuery[queryIndex]) queryIndex += 1;
+    if (queryIndex === normalizedQuery.length) return true;
+  }
+  return false;
+}
+
 function renderModelMenu(query = "") {
   modelMenu.replaceChildren();
-  const normalizedQuery = String(query || "").trim().toLocaleLowerCase();
-  const models = normalizedQuery
-    ? availableModels.filter((modelId) => modelId.toLocaleLowerCase().includes(normalizedQuery))
-    : availableModels;
+  const models = availableModels.filter((modelId) => matchesModelQuery(modelId, query));
 
   for (const modelId of models) {
     const option = document.createElement("button");
@@ -141,15 +160,27 @@ function renderModelMenu(query = "") {
   if (!models.length) {
     const empty = document.createElement("div");
     empty.className = "model-menu-empty";
-    empty.textContent = t("modelMenuEmpty");
+    empty.textContent = modelMenuLoading ? t("modelLoading") : t("modelMenuEmpty");
     modelMenu.append(empty);
   }
 }
 
 function openModelMenu(query = "") {
-  if (!availableModels.length) return;
+  if (availableModels.length) {
+    renderModelMenu(query);
+    setModelMenuOpen(true);
+    return;
+  }
+
+  const current = readForm().llm;
+  if (!current.apiKey || !current.endpoint) return;
+  modelMenuLoading = true;
   renderModelMenu(query);
   setModelMenuOpen(true);
+  void refreshModelOptions({ silent: true }).finally(() => {
+    modelMenuLoading = false;
+    if (!modelMenu.hidden) renderModelMenu(model.value);
+  });
 }
 
 function closeModelMenu() {
@@ -158,30 +189,71 @@ function closeModelMenu() {
 
 function writeModelOptions(models) {
   availableModels = [...new Set(models.map((modelId) => String(modelId).trim()).filter(Boolean))];
-  if (modelMenu.hidden === false) renderModelMenu();
+  if (modelMenu.hidden === false) renderModelMenu(model.value);
 }
 
-async function refreshModelOptions() {
+function modelCatalogKey(config) {
+  return `${config.provider}\u0000${config.endpoint}`;
+}
+
+function isCurrentModelCatalog(key) {
+  return modelCatalogKey(readForm().llm) === key;
+}
+
+async function refreshModelOptions({ force = false, silent = false } = {}) {
   const current = readForm();
   if (!current.llm.apiKey || !current.llm.endpoint) {
-    setModelStatus(t("modelRefreshRequired"), "error");
-    return;
+    if (!silent) setModelStatus(t("modelRefreshRequired"), "error");
+    return [];
   }
-  refreshModels.disabled = true;
-  refreshModels.classList.add("is-loading");
-  setModelStatus(t("modelLoading"), "loading");
+
+  const key = modelCatalogKey(current.llm);
+  const cached = modelCatalogCache.get(key);
+  if (!force && cached) {
+    if (isCurrentModelCatalog(key)) {
+      writeModelOptions(cached);
+      setModelStatus(t("modelFound", { count: cached.length }), "ready");
+    }
+    return cached;
+  }
+
+  const existingRequest = modelCatalogRequests.get(key);
+  if (existingRequest) return existingRequest;
+
+  const request = (async () => {
+    if (isCurrentModelCatalog(key)) {
+      refreshModels.disabled = true;
+      refreshModels.classList.add("is-loading");
+      setModelStatus(t("modelLoading"), "loading");
+    }
+    try {
+      const models = await listAvailableModels({ config: current.llm });
+      modelCatalogCache.set(key, models);
+      if (isCurrentModelCatalog(key)) {
+        writeModelOptions(models);
+        setModelStatus(t("modelFound", { count: models.length }), "ready");
+      }
+      return models;
+    } catch (error) {
+      if (isCurrentModelCatalog(key)) {
+        const message = error.code === "region_restricted"
+          ? t("regionRestricted")
+          : error.message || "暂时无法读取模型列表，可继续手动填写模型名。";
+        setModelStatus(message, "error");
+      }
+      return [];
+    } finally {
+      if (isCurrentModelCatalog(key)) {
+        refreshModels.disabled = false;
+        refreshModels.classList.remove("is-loading");
+      }
+    }
+  })();
+  modelCatalogRequests.set(key, request);
   try {
-    const models = await listAvailableModels({ config: current.llm });
-    writeModelOptions(models);
-    setModelStatus(t("modelFound", { count: models.length }), "ready");
-  } catch (error) {
-    const message = error.code === "region_restricted"
-      ? t("regionRestricted")
-      : error.message || "暂时无法读取模型列表，可继续手动填写模型名。";
-    setModelStatus(message, "error");
+    return await request;
   } finally {
-    refreshModels.disabled = false;
-    refreshModels.classList.remove("is-loading");
+    if (modelCatalogRequests.get(key) === request) modelCatalogRequests.delete(key);
   }
 }
 
@@ -263,12 +335,17 @@ async function loadInstallId() {
   } catch {
     if (installIdInputDirty) return;
     installIdValue.value = "";
-    installIdValue.placeholder = t("luckyCodeUnavailable");
+    installIdValue.placeholder = t("magicCodeUnavailable");
   }
 }
 
 function updateVipBadge(value) {
-  vipBadge.hidden = !isVipInstallId(value);
+  const vip = isVipInstallId(value);
+  vipBadge.hidden = !vip;
+  if (brandLogo) {
+    brandLogo.src = vip ? brandLogo.dataset.vipSrc : brandLogo.dataset.defaultSrc;
+    brandLogo.classList.toggle("is-vip", vip);
+  }
 }
 
 async function persistInstallId() {
@@ -332,8 +409,18 @@ async function init() {
     void refreshModelOptions();
   });
   for (const field of [model, endpoint, apiKey]) {
-    field.addEventListener("input", () => scheduleSave());
-    field.addEventListener("blur", () => scheduleSave(0));
+    field.addEventListener("input", () => {
+      if (field === endpoint || field === apiKey) {
+        modelCatalogCache.clear();
+        availableModels = [];
+        closeModelMenu();
+      }
+      scheduleSave();
+    });
+    field.addEventListener("blur", () => {
+      scheduleSave(0);
+      if (field === endpoint || field === apiKey) void refreshModelOptions({ silent: true });
+    });
   }
   model.addEventListener("click", () => openModelMenu());
   model.addEventListener("focus", () => openModelMenu());
@@ -394,6 +481,7 @@ async function init() {
       installIdValue.blur();
     }
   });
+  void refreshModelOptions({ silent: true });
 }
 
 const handleSystemThemeChange = () => {

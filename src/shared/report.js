@@ -32,7 +32,7 @@ function normalizeAssumptions(value) {
   return value.map((item) => limit(item, 240)).filter(Boolean).slice(0, 12);
 }
 
-export function buildReportPayload({ rawText, result = {}, referenceContext = null, extensionVersion = "" } = {}) {
+export function buildReportPayload({ rawText, result = {}, referenceContext = null, extensionVersion = "", anonymousInstallId = "", magicCode = "" } = {}) {
   const referenceDate = referenceContext?.relative ? limit(referenceContext.dateText, 40) : "";
   const assumptions = normalizeAssumptions(result.assumptions);
   const details = {
@@ -57,6 +57,8 @@ export function buildReportPayload({ rawText, result = {}, referenceContext = nu
   return {
     schema: "time-translator/report/v1",
     rawText: limit(rawText),
+    anonymousInstallId: limit(anonymousInstallId, 120),
+    magicCode: limit(magicCode, 120),
     ok: result.ok === true,
     displayText: limit(result.displayText),
     reason: limit(result.reason || result.error),
@@ -76,6 +78,8 @@ export function buildFeishuText(payload = {}) {
     : `解析失败：${payload.reason || "未知原因"}`;
   const lines = [
     "Time Translator · 转换反馈",
+    `ID：${payload.anonymousInstallId || "（未生成）"}`,
+    `Magic Code：${payload.magicCode || "（未填写）"}`,
     `原文：${payload.rawText || "（空）"}`,
     resultLine,
     payload.sourceTimeZone ? `源时区：${payload.sourceTimeZone}` : "",

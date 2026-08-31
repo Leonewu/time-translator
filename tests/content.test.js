@@ -124,6 +124,26 @@ test("成功转换后的 Tooltip 提供接案順心按钮和 Canvas 蓄力彩纸
   assert.match(contentSource, /if \(!vipEnabled\) return;/);
 });
 
+test("VIP 彩蛋支持十秒十次点击并喷出爱心与 emma，长按保留普通蓄力效果", () => {
+  assert.match(contentSource, /const CELEBRATION_CLICK_LIMIT = 10/);
+  assert.match(contentSource, /const CELEBRATION_CLICK_WINDOW_MS = 10_000/);
+  assert.doesNotMatch(contentSource, /CELEBRATION_HOLD_EASTER_EGG_MS/);
+  assert.match(contentSource, /function getHeartShape/);
+  assert.match(contentSource, /shapeFromText\(\{ text: "♥"/);
+  assert.match(contentSource, /function triggerHeartCelebration/);
+  assert.match(contentSource, /textContent = "♥ emma~"/);
+  assert.match(contentSource, /function recordCelebrationClick/);
+  assert.match(contentSource, /const celebrationClickStates = new WeakMap\(\)/);
+  assert.match(contentSource, /const clickTimes = \(celebrationClickStates\.get\(button\) \|\| \[\]\)/);
+  assert.match(contentSource, /clickTimes\.length < CELEBRATION_CLICK_LIMIT/);
+  assert.match(contentSource, /celebrationClickStates\.delete\(button\)/);
+  assert.doesNotMatch(contentSource, /holdTimer|holdThresholdReached|holdEasterEggPending|markHoldThreshold/);
+  assert.match(contentSource, /const holdDuration = pendingHoldDuration \|\| 0/);
+  assert.match(contentSource, /triggerCelebration\(celebrateButton, holdDuration\)/);
+  assert.match(contentSource, /HEART_CELEBRATION_COLORS/);
+  assert.match(contentSource, /celebration-message/);
+});
+
 test("Tooltip 提供抱怨按钮，并只通过后台上报当前 case", () => {
   assert.match(contentSource, /report: '<span[^>]*>💢<\/span>'/);
   assert.match(contentSource, /data-action="report"/);

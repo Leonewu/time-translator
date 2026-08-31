@@ -56,7 +56,7 @@ test("主滚动条使用与日夜主题一致的轻量样式", () => {
 });
 
 test("API Key 失焦时立即落盘，避免 Popup 测试成功但选区转换读取旧配置", () => {
-  assert.match(popupJs, /field\.addEventListener\("blur", \(\) => scheduleSave\(0\)\)/);
+  assert.match(popupJs, /field\.addEventListener\("blur", \(\) => \{[\s\S]*scheduleSave\(0\)/);
   assert.match(popupJs, /if \(delay === 0\) \{[\s\S]*void persistForm\(\)/);
 });
 
@@ -91,6 +91,13 @@ test("模型名支持动态候选列表并提供刷新入口", () => {
   assert.match(popupJs, /listAvailableModels/);
   assert.match(popupJs, /refreshModels\.addEventListener\("click"/);
   assert.match(popupJs, /provider\.addEventListener\("change",[\s\S]*refreshModelOptions/);
+  assert.match(popupJs, /const modelCatalogCache = new Map\(\)/);
+  assert.match(popupJs, /const modelCatalogRequests = new Map\(\)/);
+  assert.match(popupJs, /void refreshModelOptions\(\{ silent: true \}\)/);
+  assert.match(popupJs, /function modelCatalogKey/);
+  assert.match(popupJs, /function matchesModelQuery/);
+  assert.match(popupJs, /normalizeModelSearchText/);
+  assert.match(popupJs, /modelMenuLoading \? t\("modelLoading"\)/);
   assert.match(popupJs, /model\.addEventListener\("click",[\s\S]*openModelMenu/);
   assert.match(popupJs, /function openModelMenu/);
 });
@@ -126,19 +133,30 @@ test("Popup 提供自定义关键词输入框", () => {
 test("Popup 提供反馈邮件入口和当前版本号", () => {
   assert.match(popupHtml, /mailto:reon\.hypr@gmail\.com\?subject=Time%20Translator%20Feedback/);
   assert.match(popupHtml, /data-i18n="feedback"/);
+  assert.match(popupHtml, /<footer>\s*<span>v0\.1\.13<\/span>\s*<a class="feedback-link"/);
   assert.match(popupHtml, />v0\.1\.13<\/span>/);
   assert.match(popupCss, /\.feedback-link \{[^}]*margin-left:\s*auto/);
   assert.match(manifest, /"version": "0\.1\.13"/);
 });
 
-test("Popup 显示可编辑 ID 和 VIP 标识，但不提供复制按钮", () => {
-  assert.match(popupHtml, /data-i18n="installIdLabel">Lucky Code<\/span>/);
-  assert.match(i18nSource, /installIdLabel: "Lucky Code"/);
-  assert.match(i18nSource, /installIdLabel: "幸运代码"/);
-  assert.match(i18nSource, /luckyCodePlaceholder: "Enter Lucky Code"/);
-  assert.match(i18nSource, /luckyCodePlaceholder: "输入幸运代码"/);
+test("Popup 不显示自动保存提示和 API Key 浏览器存储提示", () => {
+  assert.doesNotMatch(popupHtml, /Changes save automatically/);
+  assert.doesNotMatch(popupHtml, /API key stays in this browser/);
+  assert.doesNotMatch(popupHtml, /data-i18n="footerKey"/);
+  assert.match(popupHtml, /<div class="form-actions" hidden>/);
+});
+
+test("Popup 显示可编辑 Magic Code 和 VIP 标识，但不提供复制按钮", () => {
+  assert.match(popupHtml, /data-i18n="magicCodeLabel">Magic Code<\/span>/);
+  assert.match(i18nSource, /magicCodeLabel: "Magic Code"/);
+  assert.match(i18nSource, /magicCodeLabel: "魔法代码"/);
+  assert.match(i18nSource, /magicCodePlaceholder: "Enter Magic Code"/);
+  assert.match(i18nSource, /magicCodePlaceholder: "输入魔法代码"/);
   assert.match(popupHtml, /id="installIdValue"[^>]+type="text"/);
   assert.match(popupHtml, /id="vipBadge"/);
+  assert.match(popupHtml, /aria-label="emma"/);
+  assert.match(popupHtml, /class="vip-badge-star"[^>]*><svg/);
+  assert.match(i18nSource, /vipBadge: "emma"/);
   assert.doesNotMatch(popupHtml, /id="copyInstallId"/);
   assert.match(popupJs, /getAnonymousInstallId/);
   assert.match(popupJs, /getInstallId/);
@@ -150,6 +168,12 @@ test("Popup 显示可编辑 ID 和 VIP 标识，但不提供复制按钮", () =>
   assert.match(popupJs, /if \(!value\) \{[\s\S]*await setInstallId\(""\)/);
   assert.match(popupCss, /\.install-id-row/);
   assert.match(popupCss, /\.vip-badge/);
+  assert.match(popupCss, /font-family: "Baloo 2"/);
+  assert.match(popupCss, /font-weight: 500/);
+  assert.match(popupCss, /\.install-id-label \{[^}]*font-family: "Baloo 2"/);
+  assert.match(popupCss, /\.install-id-value \{[^}]*font-family: "Baloo 2"/);
+  assert.match(popupCss, /\.vip-badge-star \{[^}]*align-items: center[^}]*display: inline-flex/);
+  assert.match(popupCss, /\.vip-badge-star svg \{[^}]*display: block/);
   assert.match(popupCss, /\.vip-badge\[hidden\] \{[^}]*display:\s*none/);
   assert.match(popupCss, /--vip-fill:\s*#eee9ff/);
   assert.match(popupCss, /--vip-star:\s*#6d51e8/);
@@ -171,6 +195,10 @@ test("Popup 不再显示 Endpoint 下方的长隐私说明", () => {
 
 test("Popup 和扩展 manifest 使用时区小云朵 logo", () => {
   assert.match(popupHtml, /class="brand-logo"[^>]+src="\.\/assets\/time-cloud\.png"/);
+  assert.match(popupHtml, /data-default-src="\.\/assets\/time-cloud\.png"/);
+  assert.match(popupHtml, /data-vip-src="\.\/assets\/vip-a2-128\.png"/);
+  assert.match(popupJs, /const brandLogo = document\.querySelector\("\.brand-logo"\)/);
+  assert.match(popupJs, /brandLogo\.src = vip \? brandLogo\.dataset\.vipSrc : brandLogo\.dataset\.defaultSrc/);
   assert.match(manifest, /src\/assets\/icon-128\.png/);
   assert.match(popupCss, /popup-shell::after[\s\S]*url\("\.\/assets\/time-cloud\.png"\)/);
 });

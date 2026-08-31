@@ -18,11 +18,18 @@ let reportError = "";
 let pointerGesture = null;
 let pendingSelectionSnapshot = null;
 let vipEnabled = false;
+let anonymousInstallId = "";
+let magicCode = "";
 
 const POINTER_MOVE_THRESHOLD = 4;
 const CELEBRATION_COLORS = ["#7c5cfc", "#a97cff", "#d48bff", "#4d427f", "#ffbd32"];
+const HEART_CELEBRATION_COLORS = ["#ef5b8b", "#ff79a8", "#d48bff", "#a97cff", "#ffbd32"];
+const CELEBRATION_CLICK_LIMIT = 10;
+const CELEBRATION_CLICK_WINDOW_MS = 10_000;
 let confettiCanvas = null;
 let confettiInstance = null;
+let heartShape = null;
+const celebrationClickStates = new WeakMap();
 
 const explicitTwelveHourTime = /\b(?:0?[1-9]|1[0-2])(?::[0-5]\d)?\s*(?:a\.?m\.?|p\.?m\.?)\b/i;
 const explicitTwentyFourHourTime = /\b(?:[01]?\d|2[0-3]):[0-5]\d\b/;
@@ -56,18 +63,23 @@ chrome.storage.local.get("settings", (result) => {
 });
 
 void getInstallId().then((installId) => {
+  magicCode = installId;
   vipEnabled = isVipInstallId(installId);
 }).catch(() => {
+  magicCode = "";
   vipEnabled = false;
 });
 
-void getAnonymousInstallId().catch(() => {
-  // The anonymous ID is only a future extension point; conversion does not depend on it.
+void getAnonymousInstallId().then((installId) => {
+  anonymousInstallId = installId;
+}).catch(() => {
+  // The anonymous ID is only used for optional feedback metadata.
 });
 
 chrome.storage.onChanged.addListener((changes, areaName) => {
   if (areaName === "local" && changes.installId) {
-    vipEnabled = isVipInstallId(changes.installId.newValue);
+    magicCode = String(changes.installId.newValue || "").trim();
+    vipEnabled = isVipInstallId(magicCode);
     requestSequence += 1;
     hideTooltip();
   }
@@ -355,8 +367,11 @@ function tooltipStyles() {
     .celebration-layer { inset: -22px; overflow: visible; pointer-events: none; position: absolute; z-index: 3; }
     .celebration-canvas { display: block; height: 100%; left: 0; pointer-events: none; position: absolute; top: 0; width: 100%; }
     @keyframes celebrate-pop { 0%, 100% { transform: scale(1); } 45% { transform: scale(1.08) rotate(-2deg); } 72% { transform: scale(.98) rotate(1deg); } }
+    .celebration-message { animation: celebration-heart-pop 1.9s cubic-bezier(.2, .82, .25, 1) forwards; color: #ef5b8b; font-size: 13px; font-weight: 800; left: 50%; line-height: 1; position: absolute; text-shadow: 0 2px 8px rgba(239, 91, 139, .24); top: 42%; transform: translate(-50%, -50%); white-space: nowrap; }
+    @keyframes celebration-heart-pop { 0% { opacity: 0; transform: translate(-50%, -20%) scale(.72) rotate(-5deg); } 18% { opacity: 1; transform: translate(-50%, -50%) scale(1.08) rotate(2deg); } 70% { opacity: 1; transform: translate(-50%, -105%) scale(1); } 100% { opacity: 0; transform: translate(-50%, -155%) scale(.92); } }
     @media (prefers-reduced-motion: reduce) {
       .celebrate.is-celebrated { animation: none; }
+      .celebration-message { animation: none; opacity: 1; }
     }
     .info.active { background: #eef2ff; color: #2d5cff; }
     .close { margin-left: 1px; }
@@ -430,17 +445,82 @@ function getConfettiInstance() {
   return confettiInstance;
 }
 
+function getHeartShape() {
+  if (heartShape || typeof confetti.shapeFromText !== "function") return heartShape;
+  try {
+    heartShape = confetti.shapeFromText({ text: "♥", scalar: 1.35, color: "#ef5b8b" });
+  } catch {
+    // Fall back to built-in shapes if this browser cannot rasterize text shapes.
+  }
+  return heartShape;
+}
+
+function getCelebrationOrigin(button) {
+  const buttonRect = button.getBoundingClientRect();
+  const viewportWidth = Math.max(1, globalThis.innerWidth || 1);
+  const viewportHeight = Math.max(1, globalThis.innerHeight || 1);
+  return {
+    x: Math.min(1, Math.max(0, (buttonRect.left + buttonRect.width / 2) / viewportWidth)),
+    y: Math.min(1, Math.max(0, (buttonRect.top + buttonRect.height / 2) / viewportHeight)),
+  };
+}
+
+function showEasterEggMessage(button) {
+  const card = button.closest(".card") || button.getRootNode?.().querySelector?.(".card");
+  const layer = card?.querySelector(".celebration-layer");
+  if (!card || !layer) return;
+  const message = document.createElement("span");
+  message.className = "celebration-message";
+  message.textContent = "♥ emma~";
+  message.setAttribute("aria-hidden", "true");
+  layer.append(message);
+  setTimeout(() => message.remove(), 1900);
+}
+
+function triggerHeartCelebration(button) {
+  const origin = getCelebrationOrigin(button);
+  const shoot = getConfettiInstance();
+  const heart = getHeartShape();
+  const shapes = heart ? [heart, heart, "circle", "star"] : ["circle", "circle", "star"];
+  shoot({
+    angle: 90,
+    colors: HEART_CELEBRATION_COLORS,
+    decay: 0.91,
+    drift: 0,
+    flat: false,
+    gravity: 0.68,
+    origin,
+    particleCount: 54,
+    scalar: 1.05,
+    shapes,
+    spread: 86,
+    startVelocity: 38,
+    ticks: 190,
+  });
+  showEasterEggMessage(button);
+}
+
+function recordCelebrationClick(button) {
+  const now = Date.now();
+  const clickTimes = (celebrationClickStates.get(button) || [])
+    .filter((timestamp) => now - timestamp < CELEBRATION_CLICK_WINDOW_MS);
+  clickTimes.push(now);
+  if (clickTimes.length < CELEBRATION_CLICK_LIMIT) {
+    celebrationClickStates.set(button, clickTimes);
+    return false;
+  }
+  celebrationClickStates.delete(button);
+  triggerHeartCelebration(button);
+  return true;
+}
+
 function triggerCelebration(button, holdDuration = 0) {
   const card = button.closest(".card") || button.getRootNode?.().querySelector?.(".card");
   const layer = card?.querySelector(".celebration-layer");
   if (!card || !layer) return;
   const profile = getCelebrationProfile(holdDuration);
 
-  const buttonRect = button.getBoundingClientRect();
-  const viewportWidth = Math.max(1, globalThis.innerWidth || 1);
-  const viewportHeight = Math.max(1, globalThis.innerHeight || 1);
-  const originX = (buttonRect.left + buttonRect.width / 2) / viewportWidth;
-  const originY = (buttonRect.top + buttonRect.height / 2) / viewportHeight;
+  const origin = getCelebrationOrigin(button);
   const shoot = getConfettiInstance();
   shoot({
     angle: 90,
@@ -449,7 +529,7 @@ function triggerCelebration(button, holdDuration = 0) {
     drift: (Math.random() - 0.5) * (0.35 + profile.charge * 0.35),
     flat: false,
     gravity: profile.gravity,
-    origin: { x: Math.min(1, Math.max(0, originX)), y: Math.min(1, Math.max(0, originY)) },
+    origin,
     particleCount: profile.particleCount,
     scalar: profile.scalar,
     shapes: ["square", "circle", "star"],
@@ -608,7 +688,8 @@ function renderResult(result, text, rect) {
       event.stopImmediatePropagation();
       const holdDuration = pendingHoldDuration || 0;
       pendingHoldDuration = null;
-      triggerCelebration(celebrateButton, holdDuration);
+      const isClickEasterEgg = recordCelebrationClick(celebrateButton);
+      if (!isClickEasterEgg) triggerCelebration(celebrateButton, holdDuration);
     };
     celebrateButton.addEventListener("click", celebrate);
   }
@@ -706,7 +787,14 @@ function handleTooltipClick(event) {
     reportError = "";
     renderResult(currentResult, currentText, currentAnchorRect);
     const sent = sendRuntimeMessage(
-      { type: "REPORT_CASE", rawText: currentText, result: currentResult, referenceContext: currentReferenceContext },
+      {
+        type: "REPORT_CASE",
+        rawText: currentText,
+        result: currentResult,
+        referenceContext: currentReferenceContext,
+        anonymousInstallId,
+        magicCode,
+      },
       (response, runtimeError) => {
         if (caseKey !== reportCaseKey) return;
         reportState = response?.ok ? "sent" : "failed";

@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { getAnonymousInstallId, getInstallId, isVipInstallId, setInstallId } from "../src/shared/install-id.js";
 
-test("Lucky Code 默认为空，只有用户输入后才保存", async () => {
+test("Magic Code 默认为空，只有用户输入后才保存", async () => {
   const values = {};
   let writes = 0;
   const storage = {

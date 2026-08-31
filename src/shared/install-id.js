@@ -102,7 +102,7 @@ export async function setInstallId(value, storage = getDefaultStorage()) {
   if (!storage) throw new Error("Extension storage is unavailable");
   const rawValue = String(value ?? "").trim();
   const code = normalizeInstallId(rawValue);
-  if (rawValue && !code) throw new Error("Lucky Code is invalid");
+  if (rawValue && !code) throw new Error("Magic Code is invalid");
   await storage.set({ [INSTALL_ID_KEY]: code });
   installIdPromise = Promise.resolve(code);
   return code;
