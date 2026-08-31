@@ -2,12 +2,12 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { getAnonymousInstallId, getInstallId, isVipInstallId, setInstallId } from "../src/shared/install-id.js";
 
-test("Magic Code 默认为空，只有用户输入后才保存", async () => {
+test("临时版本默认使用 emma，用户清空后仍可关闭 VIP", async () => {
   const values = {};
   let writes = 0;
   const storage = {
     async get(key) {
-      return { [key]: values[key] };
+      return Object.prototype.hasOwnProperty.call(values, key) ? { [key]: values[key] } : {};
     },
     async set(value) {
       writes += 1;
@@ -18,7 +18,7 @@ test("Magic Code 默认为空，只有用户输入后才保存", async () => {
   const first = await getInstallId(storage);
   const second = await getInstallId(storage);
 
-  assert.equal(first, "");
+  assert.equal(first, "emma");
   assert.equal(second, first);
   assert.equal(values.installId, undefined);
   assert.equal(writes, 0);

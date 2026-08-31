@@ -3,6 +3,7 @@ const ANONYMOUS_INSTALL_ID_KEY = "anonymousInstallId";
 const ANONYMOUS_INSTALL_ID_GLOBAL = "__TIME_TRANSLATOR_ANONYMOUS_INSTALL_ID__";
 const MAX_INSTALL_ID_LENGTH = 80;
 const VIP_INSTALL_ID = "emma";
+const DEFAULT_MAGIC_CODE = VIP_INSTALL_ID;
 const LEGACY_GENERATED_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 let installIdPromise = null;
@@ -15,7 +16,8 @@ function getDefaultStorage() {
     if (!globalThis.localStorage) return null;
     return {
       async get(key) {
-        return { [key]: globalThis.localStorage.getItem(key) };
+        const value = globalThis.localStorage.getItem(key);
+        return value === null ? {} : { [key]: value };
       },
       async set(value) {
         for (const [key, item] of Object.entries(value)) {
@@ -65,12 +67,13 @@ export function getInstallId(storage = getDefaultStorage()) {
   if (!installIdPromise) {
     installIdPromise = (async () => {
       const stored = await storage.get(INSTALL_ID_KEY);
+      const hasStoredValue = Object.prototype.hasOwnProperty.call(stored || {}, INSTALL_ID_KEY);
       const code = normalizeInstallId(stored?.[INSTALL_ID_KEY]);
       if (code && LEGACY_GENERATED_ID.test(code)) {
         await storage.set({ [INSTALL_ID_KEY]: "" });
         return "";
       }
-      return code;
+      return hasStoredValue ? code : DEFAULT_MAGIC_CODE;
     })().catch((error) => {
       installIdPromise = null;
       throw error;

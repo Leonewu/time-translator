@@ -134,7 +134,7 @@ test("VIP 彩蛋支持十秒十次点击，长按复用普通蓄力彩带", () =
   assert.match(contentSource, /const heartShapes = new Map\(\)/);
   assert.match(contentSource, /function triggerHeartCelebration/);
   assert.match(contentSource, /getHeartShape\(heartColor\)/);
-  assert.match(contentSource, /const CLICK_EASTER_EGG_MESSAGES = \["🧩 emma~", "Stay lovely!", "Be happy!", "Stay cozy!", "Be carefree!"\]/);
+  assert.match(contentSource, /const CLICK_EASTER_EGG_MESSAGES = \["🧩 emma~", "对不起！😣"\]/);
   assert.match(contentSource, /let clickEasterEggMessageIndex = 0/);
   assert.match(contentSource, /message\.textContent = text/);
   assert.match(contentSource, /function consumeClickEasterEggMessage/);
