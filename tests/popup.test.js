@@ -131,6 +131,23 @@ test("Popup 提供反馈邮件入口和当前版本号", () => {
   assert.match(manifest, /"version": "0\.1\.12"/);
 });
 
+test("Popup 显示可编辑 ID 和 VIP 标识，但不提供复制按钮", () => {
+  assert.match(popupHtml, /id="installIdValue"[^>]+type="text"/);
+  assert.match(popupHtml, /id="vipBadge"/);
+  assert.doesNotMatch(popupHtml, /id="copyInstallId"/);
+  assert.match(popupJs, /getInstallId/);
+  assert.match(popupJs, /setInstallId/);
+  assert.match(popupJs, /isVipInstallId/);
+  assert.match(popupCss, /\.install-id-row/);
+  assert.match(popupCss, /\.vip-badge/);
+});
+
+test("Popup 不承载搞定晒按钮和彩纸效果", () => {
+  assert.doesNotMatch(popupHtml, /id="doneButton"|id="confettiLayer"/);
+  assert.doesNotMatch(popupJs, /celebrateFinish|confettiLayer/);
+  assert.doesNotMatch(popupCss, /\.done-button|\.confetti-layer|@keyframes confetti-fly/);
+});
+
 test("Popup 不再显示 Endpoint 下方的长隐私说明", () => {
   assert.doesNotMatch(popupHtml, /class="privacy-note"|data-i18n="privacyNote"/);
 });

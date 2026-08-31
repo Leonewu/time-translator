@@ -1,5 +1,6 @@
 import { createSettingsSaver, getProviderPreset, loadSettings, normalizeCustomKeywords, PROVIDER_PRESETS, saveSettings } from "./shared/config.js";
 import { applyI18n, getMessage as t } from "./shared/i18n.js";
+import { getInstallId, isVipInstallId, setInstallId } from "./shared/install-id.js";
 import { listAvailableModels } from "./shared/llm.js";
 
 applyI18n();
@@ -23,12 +24,16 @@ const testText = document.querySelector("#testText");
 const testButton = document.querySelector("#testLlm");
 const testResult = document.querySelector("#testResult");
 const testJson = document.querySelector("#testJson");
+const installIdValue = document.querySelector("#installIdValue");
+const vipBadge = document.querySelector("#vipBadge");
 const systemTheme = globalThis.matchMedia?.("(prefers-color-scheme: dark)");
 let settings;
 let saveTimer;
 let availableModels = [];
 let themeMode = "system";
 let activeProvider = "";
+let installIdSaveTimer;
+let currentInstallId = "";
 const saveSettingsInOrder = createSettingsSaver(saveSettings);
 
 for (const [key, value] of Object.entries(PROVIDER_PRESETS)) {
@@ -242,6 +247,52 @@ function runTest() {
   );
 }
 
+async function loadInstallId() {
+  try {
+    const installId = await getInstallId();
+    currentInstallId = installId;
+    installIdValue.value = installId;
+    installIdValue.title = installId;
+    updateVipBadge(installId);
+  } catch {
+    installIdValue.value = "";
+    installIdValue.placeholder = t("installIdUnavailable");
+  }
+}
+
+function updateVipBadge(value) {
+  vipBadge.hidden = !isVipInstallId(value);
+}
+
+async function persistInstallId() {
+  const value = installIdValue.value.trim();
+  if (!value) {
+    installIdValue.value = currentInstallId;
+    updateVipBadge(currentInstallId);
+    return;
+  }
+  try {
+    currentInstallId = await setInstallId(value);
+    installIdValue.value = currentInstallId;
+    installIdValue.title = currentInstallId;
+    updateVipBadge(currentInstallId);
+    saveStatus.textContent = t("saved");
+  } catch {
+    installIdValue.value = currentInstallId;
+    updateVipBadge(currentInstallId);
+  }
+}
+
+function scheduleInstallIdSave(delay = 300) {
+  saveStatus.textContent = t("saving");
+  clearTimeout(installIdSaveTimer);
+  if (delay === 0) {
+    void persistInstallId();
+    return;
+  }
+  installIdSaveTimer = setTimeout(() => void persistInstallId(), delay);
+}
+
 async function init() {
   settings = await loadSettings();
   writeForm(settings);
@@ -312,6 +363,18 @@ async function init() {
   testButton.addEventListener("click", runTest);
   testText.addEventListener("keydown", (event) => {
     if (event.key === "Enter") runTest();
+  });
+  loadInstallId();
+  installIdValue.addEventListener("input", () => {
+    updateVipBadge(installIdValue.value);
+    scheduleInstallIdSave();
+  });
+  installIdValue.addEventListener("blur", () => scheduleInstallIdSave(0));
+  installIdValue.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      installIdValue.blur();
+    }
   });
 }
 

@@ -5,6 +5,7 @@ import { requestOpenAICompatibleExtraction } from "./shared/llm.js";
 import { needsReferenceDate } from "./shared/reference.js";
 import { buildReportPayload, postCaseReport } from "./shared/report.js";
 import { getMessage } from "./shared/i18n.js";
+import { getInstallId } from "./shared/install-id.js";
 
 function normalizeReferenceContext(value) {
   if (!value || !["gmail_message", "gmail_message_unresolved"].includes(value.kind)) return null;
@@ -115,6 +116,7 @@ async function resolveText(text, settings, { includeNormalization = false, refer
 }
 
 chrome.runtime.onInstalled.addListener(() => {
+  void getInstallId().catch((error) => console.warn("Time Translator: unable to create install ID", error));
   chrome.contextMenus.remove("convert-selection", () => {
     // The menu may not exist on first install; reading lastError prevents
     // Chrome from reporting that expected cleanup as an uncaught error.

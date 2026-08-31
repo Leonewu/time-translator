@@ -16,6 +16,7 @@ let pointerGesture = null;
 let pendingSelectionSnapshot = null;
 
 const POINTER_MOVE_THRESHOLD = 4;
+const CELEBRATION_COLORS = ["#ffbd32", "#5f9d7e", "#2d5cff", "#e77b63", "#29365f"];
 
 const explicitTwelveHourTime = /\b(?:0?[1-9]|1[0-2])(?::[0-5]\d)?\s*(?:a\.?m\.?|p\.?m\.?)\b/i;
 const explicitTwentyFourHourTime = /\b(?:[01]?\d|2[0-3]):[0-5]\d\b/;
@@ -79,6 +80,12 @@ function isExtensionContextValid() {
 
 function hideTooltip() {
   if (tooltipHost) tooltipHost.style.display = "none";
+}
+
+function isEventInsideTooltip(event) {
+  if (!tooltipHost) return false;
+  const path = event.composedPath?.() || [];
+  return path.includes(tooltipHost) || event.target === tooltipHost || tooltipHost.contains(event.target);
 }
 
 function sendRuntimeMessage(message, callback) {
@@ -170,7 +177,7 @@ function scheduleSelectionParse() {
 }
 
 function handlePointerDown(event) {
-  if (event.button !== 0 || (tooltipHost && event.composedPath().includes(tooltipHost))) {
+  if (event.button !== 0 || isEventInsideTooltip(event)) {
     pointerGesture = null;
     return;
   }
@@ -190,7 +197,7 @@ function handlePointerMove(event) {
 }
 
 function handleSelectionRelease(event) {
-  if (tooltipHost && event.composedPath().includes(tooltipHost)) {
+  if (isEventInsideTooltip(event)) {
     pointerGesture = null;
     pendingSelectionSnapshot = null;
     return;
@@ -319,6 +326,33 @@ function tooltipStyles() {
     .report.reported { color: #5f9d7e; }
     .report.failed { color: #d94b3f; }
     .report-emoji { display: inline-block; font-size: 11px; line-height: 1; }
+    .celebrate { color: #9a6a00; font-size: 9px; font-weight: 700; gap: 2px; letter-spacing: .01em; padding: 2px 4px; white-space: nowrap; }
+    .celebrate:hover, .celebrate:focus-visible { background: #fff5d9; color: #7d5300; }
+    .celebrate.is-charging { background: #fff5d9; box-shadow: 0 0 0 2px rgba(255, 189, 50, .14); color: #7d5300; transform: scale(1.04); }
+    .celebrate-icon { height: 10px; width: 10px; }
+    .celebrate.is-celebrated { animation: celebrate-pop .48s cubic-bezier(.2, .9, .25, 1.25); background: #fff5d9; box-shadow: 0 0 0 2px rgba(255, 189, 50, .18); color: #7d5300; }
+    .celebration-layer { inset: -22px; overflow: visible; pointer-events: none; position: absolute; z-index: 3; }
+    .celebration-burst { inset: 0; overflow: visible; position: absolute; }
+    .celebration-burst::before, .celebration-burst::after { content: ""; left: var(--origin-x); pointer-events: none; position: absolute; top: var(--origin-y); }
+    .celebration-burst::before { border: 1px solid rgba(255, 189, 50, .72); border-radius: 50%; height: 12px; opacity: 0; transform: translate(-50%, -50%) scale(.2); width: 12px; animation: celebration-ring var(--burst-duration, 1200ms) cubic-bezier(.18, .72, .28, 1) both; }
+    .celebration-burst::after { background: #fff8d8; border-radius: 50%; box-shadow: 0 0 0 4px rgba(255, 189, 50, .16), 0 0 18px 5px rgba(255, 189, 50, .28); height: 6px; opacity: 0; transform: translate(-50%, -50%) scale(.2); width: 6px; animation: celebration-flash var(--burst-duration, 1200ms) cubic-bezier(.18, .72, .28, 1) both; }
+    .celebration-ray { background: linear-gradient(to top, rgba(255, 189, 50, .95), rgba(255, 248, 216, .8)); border-radius: 999px; height: var(--ray-length, 22px); left: var(--origin-x); opacity: 0; position: absolute; top: var(--origin-y); transform: translate(-50%, -100%) rotate(var(--ray-angle)) scaleY(.2); transform-origin: 50% 100%; width: 2px; animation: celebration-ray var(--burst-duration, 1200ms) cubic-bezier(.18, .72, .28, 1) both; animation-delay: var(--ray-delay, 0ms); }
+    .celebration-piece { --dx: 0px; --dy: -80px; --rotation: 0deg; --delay: 0ms; animation: celebration-fly 1.05s cubic-bezier(.18, .72, .28, 1) both; animation-delay: var(--delay); background: var(--piece-color); border-radius: 2px; display: block; height: 8px; opacity: 0; position: absolute; transform: translate(-50%, -50%); width: 5px; will-change: opacity, transform; }
+    .celebration-piece.is-dot { border-radius: 50%; height: 5px; width: 5px; }
+    .celebration-piece.is-ribbon { border-radius: 999px 999px 2px 2px; transform-origin: 50% 18%; }
+    @keyframes celebrate-pop { 0%, 100% { transform: scale(1); } 45% { transform: scale(1.08) rotate(-2deg); } 72% { transform: scale(.98) rotate(1deg); } }
+    @keyframes celebration-ring { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.2); } 16% { opacity: .9; } 100% { opacity: 0; transform: translate(-50%, -50%) scale(4.2); } }
+    @keyframes celebration-flash { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.2); } 12% { opacity: 1; transform: translate(-50%, -50%) scale(1.6); } 34% { opacity: .18; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(-50%, -50%) scale(.7); } }
+    @keyframes celebration-ray { 0% { opacity: 0; transform: translate(-50%, -100%) rotate(var(--ray-angle)) scaleY(.2); } 18% { opacity: .95; } 62% { opacity: .32; } 100% { opacity: 0; transform: translate(-50%, -100%) rotate(var(--ray-angle)) scaleY(1); } }
+    @keyframes celebration-fly { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.4) rotate(0); } 15% { opacity: 1; } 72% { opacity: 1; } 100% { opacity: 0; transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) rotate(var(--rotation)); } }
+    @media (prefers-reduced-motion: reduce) {
+      .celebrate.is-celebrated { animation: none; }
+      .celebration-burst::before, .celebration-burst::after, .celebration-ray { animation: none; opacity: .86; }
+      .celebration-burst::before { transform: translate(-50%, -50%) scale(1.8); }
+      .celebration-burst::after { opacity: .92; transform: translate(-50%, -50%) scale(1); }
+      .celebration-ray { transform: translate(-50%, -100%) rotate(var(--ray-angle)) scaleY(1); }
+      .celebration-piece { animation: none; opacity: .92; }
+    }
     .info.active { background: #eef2ff; color: #2d5cff; }
     .close { margin-left: 1px; }
     .details { color: #687180; font-size: 9px; line-height: 1.4; margin-top: 6px; padding-top: 1px; }
@@ -340,9 +374,99 @@ function icon(name) {
     close: '<svg aria-hidden="true" viewBox="0 0 16 16" width="12" height="12"><path d="m4.5 4.5 7 7m0-7-7 7" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.4"/></svg>',
     check: '<svg aria-hidden="true" viewBox="0 0 16 16" width="12" height="12"><path d="m3.4 8.4 3 3.1 6.2-6.7" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7"/></svg>',
     refresh: '<svg aria-hidden="true" viewBox="0 0 16 16" width="12" height="12"><path d="M13 5.7A5.2 5.2 0 0 0 3.5 5M3.5 5V2.8M3.5 5h2.2M3 10.3A5.2 5.2 0 0 0 12.5 11M12.5 11v2.2M12.5 11h-2.2" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.4"/></svg>',
+    spark: '<svg class="celebrate-icon" aria-hidden="true" viewBox="0 0 16 16" width="10" height="10"><path d="m8 1.5 1 4.1 3.5 1.4L9 8.4 8 12.5 7 8.4 3.5 7 7 5.6 8 1.5ZM12.5 10.2l.4 1.7 1.6.6-1.6.7-.4 1.7-.4-1.7-1.6-.7 1.6-.6.4-1.7Z" fill="currentColor"/></svg>',
     report: '<span class="report-emoji" aria-hidden="true">💢</span>',
   };
   return icons[name] || "";
+}
+
+function getCelebrationProfile(holdDuration = 0) {
+  const duration = Math.min(Math.max(Number(holdDuration) || 0, 0), 1800);
+  const charge = duration / 1800;
+  return {
+    charge,
+    pieceCount: Math.round(22 + charge * 58),
+    spread: Math.round(145 + charge * 105),
+    lift: Math.round(100 + charge * 95),
+    rayLength: Math.round(18 + charge * 24),
+    flightDuration: Math.round(1050 + charge * 400),
+  };
+}
+
+function triggerCelebration(button, holdDuration = 0) {
+  const card = button.closest(".card") || button.getRootNode?.().querySelector?.(".card");
+  const layer = card?.querySelector(".celebration-layer");
+  const reducedMotion = Boolean(globalThis.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches);
+  if (!card || !layer) return;
+  const profile = getCelebrationProfile(holdDuration);
+
+  const layerRect = layer.getBoundingClientRect();
+  const buttonRect = button.getBoundingClientRect();
+  const originX = buttonRect.left + buttonRect.width / 2 - layerRect.left;
+  const originY = buttonRect.top + buttonRect.height / 2 - layerRect.top;
+  const burst = document.createElement("span");
+  burst.className = "celebration-burst";
+  burst.setAttribute("aria-hidden", "true");
+  burst.style.setProperty("--origin-x", `${originX}px`);
+  burst.style.setProperty("--origin-y", `${originY}px`);
+  burst.style.setProperty("--burst-duration", `${profile.flightDuration}ms`);
+  layer.append(burst);
+
+  for (let rayIndex = 0; rayIndex < 8; rayIndex += 1) {
+    const ray = document.createElement("span");
+    ray.className = "celebration-ray";
+    ray.style.setProperty("--ray-angle", `${rayIndex * 45}deg`);
+    ray.style.setProperty("--ray-delay", `${Math.round(rayIndex * 8)}ms`);
+    ray.style.setProperty("--ray-length", `${profile.rayLength + Math.round(Math.random() * 7)}px`);
+    burst.append(ray);
+  }
+
+  for (let index = 0; index < profile.pieceCount; index += 1) {
+    const piece = document.createElement("span");
+    const isDot = index % 3 === 0;
+    const isRibbon = !isDot && index % 2 === 0;
+    piece.className = `celebration-piece${isDot ? " is-dot" : ""}${isRibbon ? " is-ribbon" : ""}`;
+    piece.style.left = `${originX}px`;
+    piece.style.top = `${originY}px`;
+    piece.style.setProperty("--piece-color", CELEBRATION_COLORS[index % CELEBRATION_COLORS.length]);
+    const dx = Math.round((Math.random() - 0.5) * profile.spread);
+    const dy = Math.round(-35 - Math.random() * profile.lift);
+    const rotation = Math.round((Math.random() - 0.5) * 720);
+    const delay = Math.round(Math.random() * 100);
+    const width = isDot ? 5 + Math.round(profile.charge * 2) : isRibbon ? 3 + Math.round(profile.charge * 2) : 5 + Math.round(Math.random() * (1 + profile.charge * 2));
+    const height = isDot ? width : isRibbon ? 12 + Math.round(Math.random() * (4 + profile.charge * 8)) : 8 + Math.round(Math.random() * (2 + profile.charge * 4));
+    piece.style.setProperty("--dx", `${dx}px`);
+    piece.style.setProperty("--dy", `${dy}px`);
+    piece.style.setProperty("--rotation", `${rotation}deg`);
+    piece.style.setProperty("--delay", `${delay}ms`);
+    piece.style.height = `${height}px`;
+    piece.style.width = `${width}px`;
+    piece.style.animationDuration = `${profile.flightDuration}ms`;
+    burst.append(piece);
+    if (!reducedMotion && typeof piece.animate === "function") {
+      piece.style.animation = "none";
+      try {
+        piece.animate(
+          [
+            { opacity: 0, transform: "translate(-50%, -50%) scale(.4) rotate(0deg)" },
+            { opacity: 1, transform: "translate(-50%, -50%) scale(1) rotate(0deg)", offset: .15 },
+            { opacity: 0, transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) rotate(${rotation}deg)` },
+          ],
+          { delay, duration: profile.flightDuration, easing: "cubic-bezier(.18, .72, .28, 1)", fill: "both" },
+        );
+      } catch (error) {
+        piece.style.animation = `celebration-fly ${profile.flightDuration}ms cubic-bezier(.18, .72, .28, 1) both`;
+      }
+    }
+  }
+
+  button.classList.remove("is-celebrated");
+  void button.offsetWidth;
+  button.classList.add("is-celebrated");
+  setTimeout(() => {
+    burst.remove();
+    button.classList.remove("is-celebrated");
+  }, profile.flightDuration + 150);
 }
 
 function renderLoading(text, rect) {
@@ -351,6 +475,7 @@ function renderLoading(text, rect) {
   currentText = text;
   host.shadowRoot.innerHTML = `<style>${tooltipStyles()}</style>
     <div class="card">
+      <div class="celebration-layer" aria-hidden="true"></div>
       <div class="flow">
         <div class="side"><div class="source" title="${escapeHtml(text)}">${escapeHtml(text)}</div></div>
         <div class="arrow">→</div>
@@ -418,6 +543,7 @@ function renderResult(result, text, rect) {
     </div>` : "";
   host.shadowRoot.innerHTML = `<style>${tooltipStyles()}</style>
     <div class="card">
+      <div class="celebration-layer" aria-hidden="true"></div>
       <div class="flow">
         <div class="side">
           <div class="source" title="${escapeHtml(text)}">${escapeHtml(text)}</div>
@@ -431,6 +557,7 @@ function renderResult(result, text, rect) {
         </div>
       </div>
       <div class="toolbar">
+        <button type="button" class="celebrate" aria-label="接案順心" title="接案順心" data-action="celebrate">${icon("spark")}<span>接案順心</span></button>
         <button class="copy" aria-label="复制北京时间" title="复制北京时间" data-action="copy" data-copy="${escapeHtml(result.displayText)}">${icon("copy")}</button>
         <button class="refresh" aria-label="重新解析" title="重新解析" data-action="refresh">${icon("refresh")}</button>
         ${reportButton()}
@@ -439,6 +566,52 @@ function renderResult(result, text, rect) {
       </div>
       ${details}
     </div>`;
+  const celebrateButton = host.shadowRoot.querySelector('[data-action="celebrate"]');
+  if (celebrateButton) {
+    let pressStartedAt = 0;
+    let pressPointerId = null;
+    let pendingHoldDuration = null;
+    const finishPress = (event) => {
+      if (!pressStartedAt || (pressPointerId !== null && event.pointerId !== pressPointerId)) return;
+      pendingHoldDuration = Date.now() - pressStartedAt;
+      pressStartedAt = 0;
+      pressPointerId = null;
+      celebrateButton.classList.remove("is-charging");
+      try {
+        celebrateButton.releasePointerCapture?.(event.pointerId);
+      } catch {
+        // The pointer may already have been released by the browser.
+      }
+    };
+    celebrateButton.addEventListener("pointerdown", (event) => {
+      if (event.pointerType === "mouse" && event.button !== 0) return;
+      pressStartedAt = Date.now();
+      pressPointerId = event.pointerId;
+      pendingHoldDuration = null;
+      celebrateButton.classList.add("is-charging");
+      try {
+        celebrateButton.setPointerCapture?.(event.pointerId);
+      } catch {
+        // Pointer capture is optional; the click event remains the fallback.
+      }
+    });
+    celebrateButton.addEventListener("pointerup", finishPress);
+    celebrateButton.addEventListener("pointercancel", (event) => {
+      if (pressPointerId !== null && event.pointerId !== pressPointerId) return;
+      pressStartedAt = 0;
+      pressPointerId = null;
+      pendingHoldDuration = null;
+      celebrateButton.classList.remove("is-charging");
+    });
+    const celebrate = (event) => {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      const holdDuration = pendingHoldDuration || 0;
+      pendingHoldDuration = null;
+      triggerCelebration(celebrateButton, holdDuration);
+    };
+    celebrateButton.addEventListener("click", celebrate);
+  }
   placeHost(rect);
 }
 
@@ -498,8 +671,10 @@ document.addEventListener("keyup", (event) => {
 });
 
 function handleTooltipClick(event) {
-  const button = event.target.closest("button");
+  const button = getTooltipButton(event);
   if (!button) return;
+  event.preventDefault();
+  event.stopPropagation();
   const action = button.dataset.action;
   if (action === "close") {
     dismissedSelection = { text: currentText, at: Date.now() };
@@ -521,6 +696,8 @@ function handleTooltipClick(event) {
     const retryText = currentText;
     const retryRect = currentAnchorRect;
     if (retryText) renderAndParse({ text: retryText, rect: retryRect, referenceContext: currentReferenceContext }, true);
+  } else if (action === "celebrate") {
+    triggerCelebration(button);
   } else if (action === "report") {
     if (!currentText || reportState === "sending" || reportState === "sent") return;
     const caseKey = reportCaseKey;
@@ -547,6 +724,11 @@ function handleTooltipClick(event) {
   }
 }
 
+function getTooltipButton(event) {
+  return event.composedPath?.().find((node) => node?.nodeType === 1 && node.tagName === "BUTTON")
+    || event.target?.closest?.("button");
+}
+
 function repositionTooltip() {
   if (!tooltipHost || tooltipHost.style.display === "none") return;
   const selection = getSelectionInfo();
@@ -555,7 +737,7 @@ function repositionTooltip() {
 }
 
 document.addEventListener("mousedown", (event) => {
-  if (tooltipHost && !event.composedPath().includes(tooltipHost)) {
+  if (tooltipHost && !isEventInsideTooltip(event)) {
     if (currentText) dismissedSelection = { text: currentText, at: Date.now() };
     requestSequence += 1;
     hideTooltip();

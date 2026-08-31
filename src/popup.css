@@ -189,3 +189,9 @@ select:focus, input:focus, textarea:focus { border-color: var(--lime); box-shado
 footer { align-items: center; color: var(--faint); display: flex; font-size: 9px; gap: 10px; justify-content: flex-start; padding-top: 14px; }
 .feedback-link { color: var(--green); margin-left: auto; text-decoration: none; }
 .feedback-link:hover, .feedback-link:focus-visible { color: var(--lime); text-decoration: underline; }
+.install-id-row { align-items: center; border-top: 1px solid var(--line); display: flex; gap: 7px; margin-top: 10px; min-width: 0; padding-top: 9px; }
+.install-id-label { color: var(--faint); flex: 0 0 auto; font-size: 8px; letter-spacing: .03em; }
+.install-id-value { background: transparent; border: 0; border-bottom: 1px dashed var(--line); border-radius: 0; color: var(--muted); flex: 1 1 auto; font: 8px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace; min-width: 0; overflow: hidden; padding: 3px 0; text-overflow: ellipsis; white-space: nowrap; }
+.install-id-value:focus { border-bottom-color: var(--lime); box-shadow: none; }
+.vip-badge { align-items: center; background: linear-gradient(135deg, #29365f 0%, #3b4d82 100%); border: 1px solid #ffbd32; border-radius: 999px; box-shadow: 0 0 0 1px rgba(255, 189, 50, .22), 0 2px 8px rgba(255, 189, 50, .22); color: #ffda72; display: inline-flex; flex: 0 0 auto; font-size: 8px; font-weight: 800; gap: 3px; letter-spacing: .08em; padding: 2px 6px 2px 5px; }
+.vip-badge-star { color: #fff5bf; font-size: 9px; line-height: 1; text-shadow: 0 0 5px rgba(255, 218, 114, .75); }
