@@ -26,9 +26,10 @@ const CELEBRATION_COLORS = ["#7c5cfc", "#a97cff", "#d48bff", "#4d427f", "#ffbd32
 const HEART_CELEBRATION_COLORS = ["#ef5b8b", "#ff79a8", "#d48bff", "#a97cff", "#ffbd32"];
 const CELEBRATION_CLICK_LIMIT = 10;
 const CELEBRATION_CLICK_WINDOW_MS = 10_000;
+const CELEBRATION_SHAKE_THRESHOLD_MS = 1_000;
 let confettiCanvas = null;
 let confettiInstance = null;
-let heartShape = null;
+const heartShapes = new Map();
 const celebrationClickStates = new WeakMap();
 
 const explicitTwelveHourTime = /\b(?:0?[1-9]|1[0-2])(?::[0-5]\d)?\s*(?:a\.?m\.?|p\.?m\.?)\b/i;
@@ -361,16 +362,19 @@ function tooltipStyles() {
     .report-emoji { display: inline-block; font-size: 11px; line-height: 1; }
     .celebrate { color: #9a6a00; font-size: 9px; font-weight: 700; gap: 2px; letter-spacing: .01em; padding: 2px 4px; white-space: nowrap; }
     .celebrate:hover, .celebrate:focus-visible { background: #fff5d9; color: #7d5300; }
-    .celebrate.is-charging { background: #fff5d9; box-shadow: 0 0 0 2px rgba(255, 189, 50, .14); color: #7d5300; transform: scale(1.04); }
+    .celebrate.is-charging { background: #fff5d9; box-shadow: 0 0 0 2px rgba(255, 189, 50, .14); color: #7d5300; transform: scale(1.04) rotate(-1.4deg); }
+    .celebrate.is-charging-shake { animation: celebrate-charge-wiggle .4s ease-in-out infinite; }
     .celebrate-icon { height: 10px; width: 10px; }
     .celebrate.is-celebrated { animation: celebrate-pop .48s cubic-bezier(.2, .9, .25, 1.25); background: #fff5d9; box-shadow: 0 0 0 2px rgba(255, 189, 50, .18); color: #7d5300; }
     .celebration-layer { inset: -22px; overflow: visible; pointer-events: none; position: absolute; z-index: 3; }
     .celebration-canvas { display: block; height: 100%; left: 0; pointer-events: none; position: absolute; top: 0; width: 100%; }
     @keyframes celebrate-pop { 0%, 100% { transform: scale(1); } 45% { transform: scale(1.08) rotate(-2deg); } 72% { transform: scale(.98) rotate(1deg); } }
     .celebration-message { animation: celebration-heart-pop 1.9s cubic-bezier(.2, .82, .25, 1) forwards; color: #ef5b8b; font-size: 13px; font-weight: 800; left: 50%; line-height: 1; position: absolute; text-shadow: 0 2px 8px rgba(239, 91, 139, .24); top: 42%; transform: translate(-50%, -50%); white-space: nowrap; }
+    @keyframes celebrate-charge-wiggle { 0%, 18% { transform: scale(1.04) rotate(-1.4deg); } 36% { transform: scale(1.04) translateX(-1.5px) rotate(-.7deg); } 54% { transform: scale(1.04) translateX(1.5px) rotate(.8deg); } 72% { transform: scale(1.04) translateX(-1px) rotate(-.5deg); } 100% { transform: scale(1.04) translateX(1px) rotate(.4deg); } }
     @keyframes celebration-heart-pop { 0% { opacity: 0; transform: translate(-50%, -20%) scale(.72) rotate(-5deg); } 18% { opacity: 1; transform: translate(-50%, -50%) scale(1.08) rotate(2deg); } 70% { opacity: 1; transform: translate(-50%, -105%) scale(1); } 100% { opacity: 0; transform: translate(-50%, -155%) scale(.92); } }
     @media (prefers-reduced-motion: reduce) {
       .celebrate.is-celebrated { animation: none; }
+      .celebrate.is-charging-shake { animation: none; }
       .celebration-message { animation: none; opacity: 1; }
     }
     .info.active { background: #eef2ff; color: #2d5cff; }
@@ -445,14 +449,15 @@ function getConfettiInstance() {
   return confettiInstance;
 }
 
-function getHeartShape() {
-  if (heartShape || typeof confetti.shapeFromText !== "function") return heartShape;
+function getHeartShape(color = "#ef5b8b") {
+  if (heartShapes.has(color) || typeof confetti.shapeFromText !== "function") return heartShapes.get(color) || null;
   try {
-    heartShape = confetti.shapeFromText({ text: "♥", scalar: 1.35, color: "#ef5b8b" });
+    const shape = confetti.shapeFromText({ text: "♥", scalar: 1.35, color });
+    heartShapes.set(color, shape);
   } catch {
     // Fall back to built-in shapes if this browser cannot rasterize text shapes.
   }
-  return heartShape;
+  return heartShapes.get(color) || null;
 }
 
 function getCelebrationOrigin(button) {
@@ -465,26 +470,28 @@ function getCelebrationOrigin(button) {
   };
 }
 
-function showEasterEggMessage(button) {
+function showEasterEggMessage(button, { color = "#ef5b8b", shadowColor = "rgba(239, 91, 139, .24)" } = {}) {
   const card = button.closest(".card") || button.getRootNode?.().querySelector?.(".card");
   const layer = card?.querySelector(".celebration-layer");
   if (!card || !layer) return;
   const message = document.createElement("span");
   message.className = "celebration-message";
   message.textContent = "♥ emma~";
+  message.style.color = color;
+  message.style.textShadow = `0 2px 8px ${shadowColor}`;
   message.setAttribute("aria-hidden", "true");
   layer.append(message);
   setTimeout(() => message.remove(), 1900);
 }
 
-function triggerHeartCelebration(button) {
+function triggerHeartCelebration(button, { colors = HEART_CELEBRATION_COLORS, heartColor = "#ef5b8b" } = {}) {
   const origin = getCelebrationOrigin(button);
   const shoot = getConfettiInstance();
-  const heart = getHeartShape();
+  const heart = getHeartShape(heartColor);
   const shapes = heart ? [heart, heart, "circle", "star"] : ["circle", "circle", "star"];
   shoot({
     angle: 90,
-    colors: HEART_CELEBRATION_COLORS,
+    colors,
     decay: 0.91,
     drift: 0,
     flat: false,
@@ -604,7 +611,7 @@ function renderResult(result, text, rect) {
   const sourceZone = formatSourceZone(result);
   const targetZone = formatTargetZone(result);
   const celebrateAction = vipEnabled
-    ? `<button type="button" class="celebrate" aria-label="接案順心" title="接案順心" data-action="celebrate">${icon("spark")}<span>接案順心</span></button>`
+    ? `<button type="button" class="celebrate" aria-label="接案順心!" title="接案順心!" data-action="celebrate">${icon("spark")}<span>接案順心!</span></button>`
     : "";
   const source = escapeHtml(sourceZone);
   const relationLabels = { before: "不晚于", by: "截止", after: "之后", at: "时间点", between: "时间范围", from: "时间范围" };
@@ -651,12 +658,27 @@ function renderResult(result, text, rect) {
     let pressStartedAt = 0;
     let pressPointerId = null;
     let pendingHoldDuration = null;
+    let shakeTimer = null;
+    const clearShakeTimer = () => {
+      if (shakeTimer) clearTimeout(shakeTimer);
+      shakeTimer = null;
+    };
+    const startShakeTimer = () => {
+      clearShakeTimer();
+      shakeTimer = setTimeout(() => {
+        if (!pressStartedAt) return;
+        celebrateButton.classList.add("is-charging");
+        celebrateButton.classList.add("is-charging-shake");
+      }, CELEBRATION_SHAKE_THRESHOLD_MS);
+    };
     const finishPress = (event) => {
       if (!pressStartedAt || (pressPointerId !== null && event.pointerId !== pressPointerId)) return;
       pendingHoldDuration = Date.now() - pressStartedAt;
+      clearShakeTimer();
       pressStartedAt = 0;
       pressPointerId = null;
       celebrateButton.classList.remove("is-charging");
+      celebrateButton.classList.remove("is-charging-shake");
       try {
         celebrateButton.releasePointerCapture?.(event.pointerId);
       } catch {
@@ -668,7 +690,7 @@ function renderResult(result, text, rect) {
       pressStartedAt = Date.now();
       pressPointerId = event.pointerId;
       pendingHoldDuration = null;
-      celebrateButton.classList.add("is-charging");
+      startShakeTimer();
       try {
         celebrateButton.setPointerCapture?.(event.pointerId);
       } catch {
@@ -681,7 +703,9 @@ function renderResult(result, text, rect) {
       pressStartedAt = 0;
       pressPointerId = null;
       pendingHoldDuration = null;
+      clearShakeTimer();
       celebrateButton.classList.remove("is-charging");
+      celebrateButton.classList.remove("is-charging-shake");
     });
     const celebrate = (event) => {
       event.preventDefault();
