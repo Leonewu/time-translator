@@ -30,6 +30,12 @@
   --button-hover: #ffd36b;
   --scroll-thumb: rgba(41, 54, 95, .28);
   --scroll-thumb-hover: rgba(41, 54, 95, .46);
+  --vip-ink: #4f38b8;
+  --vip-fill: #eee9ff;
+  --vip-line: #b8a8f5;
+  --vip-star: #6d51e8;
+  --vip-ring-strong: rgba(124, 92, 252, .18);
+  --vip-glow: rgba(124, 92, 252, .2);
   font-family: "Avenir Next", "Segoe UI", ui-sans-serif, sans-serif;
 }
 
@@ -47,6 +53,12 @@
   --code: #b6c7bc;
   --scroll-thumb: rgba(255, 253, 248, .28);
   --scroll-thumb-hover: rgba(255, 253, 248, .48);
+  --vip-ink: #d9c8ff;
+  --vip-fill: rgba(169, 124, 255, .14);
+  --vip-line: rgba(169, 124, 255, .54);
+  --vip-star: #c1a6ff;
+  --vip-ring-strong: rgba(169, 124, 255, .24);
+  --vip-glow: rgba(169, 124, 255, .3);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -64,6 +76,12 @@
     --code: #b6c7bc;
     --scroll-thumb: rgba(255, 253, 248, .28);
     --scroll-thumb-hover: rgba(255, 253, 248, .48);
+    --vip-ink: #d9c8ff;
+    --vip-fill: rgba(169, 124, 255, .14);
+    --vip-line: rgba(169, 124, 255, .54);
+    --vip-star: #c1a6ff;
+    --vip-ring-strong: rgba(169, 124, 255, .24);
+    --vip-glow: rgba(169, 124, 255, .3);
   }
 }
 
@@ -193,5 +211,13 @@ footer { align-items: center; color: var(--faint); display: flex; font-size: 9px
 .install-id-label { color: var(--faint); flex: 0 0 auto; font-size: 8px; letter-spacing: .03em; }
 .install-id-value { background: transparent; border: 0; border-bottom: 1px dashed var(--line); border-radius: 0; color: var(--muted); flex: 1 1 auto; font: 8px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace; min-width: 0; overflow: hidden; padding: 3px 0; text-overflow: ellipsis; white-space: nowrap; }
 .install-id-value:focus { border-bottom-color: var(--lime); box-shadow: none; }
-.vip-badge { align-items: center; background: linear-gradient(135deg, #29365f 0%, #3b4d82 100%); border: 1px solid #ffbd32; border-radius: 999px; box-shadow: 0 0 0 1px rgba(255, 189, 50, .22), 0 2px 8px rgba(255, 189, 50, .22); color: #ffda72; display: inline-flex; flex: 0 0 auto; font-size: 8px; font-weight: 800; gap: 3px; letter-spacing: .08em; padding: 2px 6px 2px 5px; }
-.vip-badge-star { color: #fff5bf; font-size: 9px; line-height: 1; text-shadow: 0 0 5px rgba(255, 218, 114, .75); }
+.vip-badge { align-items: center; animation: vip-breathe 2.8s ease-in-out infinite; background: var(--vip-fill); border: 1px solid var(--vip-line); border-radius: 999px; box-shadow: 0 1px 4px var(--vip-glow); color: var(--vip-ink); display: inline-flex; flex: 0 0 auto; font-family: "Avenir Next", "Segoe UI", ui-sans-serif, sans-serif; font-size: 7px; font-weight: 800; gap: 2px; letter-spacing: .07em; line-height: 1; padding: 2px 5px 2px 4px; }
+.vip-badge[hidden] { display: none; }
+.vip-badge-star { color: var(--vip-star); font-size: 8px; line-height: 1; text-shadow: 0 0 5px var(--vip-glow); }
+@keyframes vip-breathe {
+  0%, 100% { box-shadow: 0 1px 4px var(--vip-glow); }
+  50% { box-shadow: 0 1px 8px var(--vip-glow), 0 0 0 1px var(--vip-ring-strong); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .vip-badge { animation: none; }
+}

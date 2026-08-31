@@ -1,3 +1,6 @@
+import confetti from "canvas-confetti";
+import { getAnonymousInstallId, getInstallId, isVipInstallId } from "./shared/install-id.js";
+
 let tooltipHost = null;
 let requestSequence = 0;
 let currentAnchorRect = null;
@@ -14,9 +17,12 @@ let reportState = "idle";
 let reportError = "";
 let pointerGesture = null;
 let pendingSelectionSnapshot = null;
+let vipEnabled = false;
 
 const POINTER_MOVE_THRESHOLD = 4;
-const CELEBRATION_COLORS = ["#ffbd32", "#5f9d7e", "#2d5cff", "#e77b63", "#29365f"];
+const CELEBRATION_COLORS = ["#7c5cfc", "#a97cff", "#d48bff", "#4d427f", "#ffbd32"];
+let confettiCanvas = null;
+let confettiInstance = null;
 
 const explicitTwelveHourTime = /\b(?:0?[1-9]|1[0-2])(?::[0-5]\d)?\s*(?:a\.?m\.?|p\.?m\.?)\b/i;
 const explicitTwentyFourHourTime = /\b(?:[01]?\d|2[0-3]):[0-5]\d\b/;
@@ -49,7 +55,22 @@ chrome.storage.local.get("settings", (result) => {
   customTimeKeywords = normalizeCustomKeywords(settings.customKeywords);
 });
 
+void getInstallId().then((installId) => {
+  vipEnabled = isVipInstallId(installId);
+}).catch(() => {
+  vipEnabled = false;
+});
+
+void getAnonymousInstallId().catch(() => {
+  // The anonymous ID is only a future extension point; conversion does not depend on it.
+});
+
 chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName === "local" && changes.installId) {
+    vipEnabled = isVipInstallId(changes.installId.newValue);
+    requestSequence += 1;
+    hideTooltip();
+  }
   if (areaName === "local" && changes.settings) {
     const settings = changes.settings.newValue || {};
     autoConvert = settings.autoConvert !== false && settings.enabled !== false;
@@ -332,26 +353,10 @@ function tooltipStyles() {
     .celebrate-icon { height: 10px; width: 10px; }
     .celebrate.is-celebrated { animation: celebrate-pop .48s cubic-bezier(.2, .9, .25, 1.25); background: #fff5d9; box-shadow: 0 0 0 2px rgba(255, 189, 50, .18); color: #7d5300; }
     .celebration-layer { inset: -22px; overflow: visible; pointer-events: none; position: absolute; z-index: 3; }
-    .celebration-burst { inset: 0; overflow: visible; position: absolute; }
-    .celebration-burst::before, .celebration-burst::after { content: ""; left: var(--origin-x); pointer-events: none; position: absolute; top: var(--origin-y); }
-    .celebration-burst::before { border: 1px solid rgba(255, 189, 50, .72); border-radius: 50%; height: 12px; opacity: 0; transform: translate(-50%, -50%) scale(.2); width: 12px; animation: celebration-ring var(--burst-duration, 1200ms) cubic-bezier(.18, .72, .28, 1) both; }
-    .celebration-burst::after { background: #fff8d8; border-radius: 50%; box-shadow: 0 0 0 4px rgba(255, 189, 50, .16), 0 0 18px 5px rgba(255, 189, 50, .28); height: 6px; opacity: 0; transform: translate(-50%, -50%) scale(.2); width: 6px; animation: celebration-flash var(--burst-duration, 1200ms) cubic-bezier(.18, .72, .28, 1) both; }
-    .celebration-ray { background: linear-gradient(to top, rgba(255, 189, 50, .95), rgba(255, 248, 216, .8)); border-radius: 999px; height: var(--ray-length, 22px); left: var(--origin-x); opacity: 0; position: absolute; top: var(--origin-y); transform: translate(-50%, -100%) rotate(var(--ray-angle)) scaleY(.2); transform-origin: 50% 100%; width: 2px; animation: celebration-ray var(--burst-duration, 1200ms) cubic-bezier(.18, .72, .28, 1) both; animation-delay: var(--ray-delay, 0ms); }
-    .celebration-piece { --dx: 0px; --dy: -80px; --rotation: 0deg; --delay: 0ms; animation: celebration-fly 1.05s cubic-bezier(.18, .72, .28, 1) both; animation-delay: var(--delay); background: var(--piece-color); border-radius: 2px; display: block; height: 8px; opacity: 0; position: absolute; transform: translate(-50%, -50%); width: 5px; will-change: opacity, transform; }
-    .celebration-piece.is-dot { border-radius: 50%; height: 5px; width: 5px; }
-    .celebration-piece.is-ribbon { border-radius: 999px 999px 2px 2px; transform-origin: 50% 18%; }
+    .celebration-canvas { display: block; height: 100%; left: 0; pointer-events: none; position: absolute; top: 0; width: 100%; }
     @keyframes celebrate-pop { 0%, 100% { transform: scale(1); } 45% { transform: scale(1.08) rotate(-2deg); } 72% { transform: scale(.98) rotate(1deg); } }
-    @keyframes celebration-ring { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.2); } 16% { opacity: .9; } 100% { opacity: 0; transform: translate(-50%, -50%) scale(4.2); } }
-    @keyframes celebration-flash { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.2); } 12% { opacity: 1; transform: translate(-50%, -50%) scale(1.6); } 34% { opacity: .18; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(-50%, -50%) scale(.7); } }
-    @keyframes celebration-ray { 0% { opacity: 0; transform: translate(-50%, -100%) rotate(var(--ray-angle)) scaleY(.2); } 18% { opacity: .95; } 62% { opacity: .32; } 100% { opacity: 0; transform: translate(-50%, -100%) rotate(var(--ray-angle)) scaleY(1); } }
-    @keyframes celebration-fly { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.4) rotate(0); } 15% { opacity: 1; } 72% { opacity: 1; } 100% { opacity: 0; transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) rotate(var(--rotation)); } }
     @media (prefers-reduced-motion: reduce) {
       .celebrate.is-celebrated { animation: none; }
-      .celebration-burst::before, .celebration-burst::after, .celebration-ray { animation: none; opacity: .86; }
-      .celebration-burst::before { transform: translate(-50%, -50%) scale(1.8); }
-      .celebration-burst::after { opacity: .92; transform: translate(-50%, -50%) scale(1); }
-      .celebration-ray { transform: translate(-50%, -100%) rotate(var(--ray-angle)) scaleY(1); }
-      .celebration-piece { animation: none; opacity: .92; }
     }
     .info.active { background: #eef2ff; color: #2d5cff; }
     .close { margin-left: 1px; }
@@ -385,88 +390,80 @@ function getCelebrationProfile(holdDuration = 0) {
   const charge = duration / 1800;
   return {
     charge,
-    pieceCount: Math.round(22 + charge * 58),
-    spread: Math.round(145 + charge * 105),
-    lift: Math.round(100 + charge * 95),
-    rayLength: Math.round(18 + charge * 24),
+    particleCount: Math.round(28 + charge * 72),
+    spread: Math.round(62 + charge * 108),
+    startVelocity: Math.round(28 + charge * 22),
+    decay: Number((0.92 - charge * 0.03).toFixed(2)),
+    gravity: Number((0.82 - charge * 0.3).toFixed(2)),
+    ticks: Math.round(125 + charge * 95),
+    scalar: Number((0.68 + charge * 0.3).toFixed(2)),
     flightDuration: Math.round(1050 + charge * 400),
   };
+}
+
+function getConfettiInstance() {
+  if (confettiCanvas && confettiInstance) return confettiInstance;
+
+  const existingCanvas = document.getElementById("time-translator-celebration-canvas");
+  const canvas = existingCanvas instanceof HTMLCanvasElement ? existingCanvas : document.createElement("canvas");
+  canvas.id = "time-translator-celebration-canvas";
+  canvas.className = "celebration-canvas";
+  canvas.setAttribute("aria-hidden", "true");
+  canvas.width = Math.max(1, Math.round(globalThis.innerWidth || 1));
+  canvas.height = Math.max(1, Math.round(globalThis.innerHeight || 1));
+  Object.assign(canvas.style, {
+    height: "100vh",
+    left: "0",
+    pointerEvents: "none",
+    position: "fixed",
+    top: "0",
+    width: "100vw",
+    zIndex: "2147483646",
+  });
+  if (!canvas.isConnected) document.documentElement.append(canvas);
+  confettiCanvas = canvas;
+  confettiInstance = confetti.create(canvas, {
+    disableForReducedMotion: true,
+    resize: true,
+    useWorker: false,
+  });
+  return confettiInstance;
 }
 
 function triggerCelebration(button, holdDuration = 0) {
   const card = button.closest(".card") || button.getRootNode?.().querySelector?.(".card");
   const layer = card?.querySelector(".celebration-layer");
-  const reducedMotion = Boolean(globalThis.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches);
   if (!card || !layer) return;
   const profile = getCelebrationProfile(holdDuration);
 
-  const layerRect = layer.getBoundingClientRect();
   const buttonRect = button.getBoundingClientRect();
-  const originX = buttonRect.left + buttonRect.width / 2 - layerRect.left;
-  const originY = buttonRect.top + buttonRect.height / 2 - layerRect.top;
-  const burst = document.createElement("span");
-  burst.className = "celebration-burst";
-  burst.setAttribute("aria-hidden", "true");
-  burst.style.setProperty("--origin-x", `${originX}px`);
-  burst.style.setProperty("--origin-y", `${originY}px`);
-  burst.style.setProperty("--burst-duration", `${profile.flightDuration}ms`);
-  layer.append(burst);
-
-  for (let rayIndex = 0; rayIndex < 8; rayIndex += 1) {
-    const ray = document.createElement("span");
-    ray.className = "celebration-ray";
-    ray.style.setProperty("--ray-angle", `${rayIndex * 45}deg`);
-    ray.style.setProperty("--ray-delay", `${Math.round(rayIndex * 8)}ms`);
-    ray.style.setProperty("--ray-length", `${profile.rayLength + Math.round(Math.random() * 7)}px`);
-    burst.append(ray);
-  }
-
-  for (let index = 0; index < profile.pieceCount; index += 1) {
-    const piece = document.createElement("span");
-    const isDot = index % 3 === 0;
-    const isRibbon = !isDot && index % 2 === 0;
-    piece.className = `celebration-piece${isDot ? " is-dot" : ""}${isRibbon ? " is-ribbon" : ""}`;
-    piece.style.left = `${originX}px`;
-    piece.style.top = `${originY}px`;
-    piece.style.setProperty("--piece-color", CELEBRATION_COLORS[index % CELEBRATION_COLORS.length]);
-    const dx = Math.round((Math.random() - 0.5) * profile.spread);
-    const dy = Math.round(-35 - Math.random() * profile.lift);
-    const rotation = Math.round((Math.random() - 0.5) * 720);
-    const delay = Math.round(Math.random() * 100);
-    const width = isDot ? 5 + Math.round(profile.charge * 2) : isRibbon ? 3 + Math.round(profile.charge * 2) : 5 + Math.round(Math.random() * (1 + profile.charge * 2));
-    const height = isDot ? width : isRibbon ? 12 + Math.round(Math.random() * (4 + profile.charge * 8)) : 8 + Math.round(Math.random() * (2 + profile.charge * 4));
-    piece.style.setProperty("--dx", `${dx}px`);
-    piece.style.setProperty("--dy", `${dy}px`);
-    piece.style.setProperty("--rotation", `${rotation}deg`);
-    piece.style.setProperty("--delay", `${delay}ms`);
-    piece.style.height = `${height}px`;
-    piece.style.width = `${width}px`;
-    piece.style.animationDuration = `${profile.flightDuration}ms`;
-    burst.append(piece);
-    if (!reducedMotion && typeof piece.animate === "function") {
-      piece.style.animation = "none";
-      try {
-        piece.animate(
-          [
-            { opacity: 0, transform: "translate(-50%, -50%) scale(.4) rotate(0deg)" },
-            { opacity: 1, transform: "translate(-50%, -50%) scale(1) rotate(0deg)", offset: .15 },
-            { opacity: 0, transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) rotate(${rotation}deg)` },
-          ],
-          { delay, duration: profile.flightDuration, easing: "cubic-bezier(.18, .72, .28, 1)", fill: "both" },
-        );
-      } catch (error) {
-        piece.style.animation = `celebration-fly ${profile.flightDuration}ms cubic-bezier(.18, .72, .28, 1) both`;
-      }
-    }
-  }
+  const viewportWidth = Math.max(1, globalThis.innerWidth || 1);
+  const viewportHeight = Math.max(1, globalThis.innerHeight || 1);
+  const originX = (buttonRect.left + buttonRect.width / 2) / viewportWidth;
+  const originY = (buttonRect.top + buttonRect.height / 2) / viewportHeight;
+  const shoot = getConfettiInstance();
+  shoot({
+    angle: 90,
+    colors: CELEBRATION_COLORS,
+    decay: profile.decay,
+    drift: (Math.random() - 0.5) * (0.35 + profile.charge * 0.35),
+    flat: false,
+    gravity: profile.gravity,
+    origin: { x: Math.min(1, Math.max(0, originX)), y: Math.min(1, Math.max(0, originY)) },
+    particleCount: profile.particleCount,
+    scalar: profile.scalar,
+    shapes: ["square", "circle", "star"],
+    spread: profile.spread,
+    startVelocity: profile.startVelocity,
+    ticks: profile.ticks,
+  });
 
   button.classList.remove("is-celebrated");
   void button.offsetWidth;
   button.classList.add("is-celebrated");
   setTimeout(() => {
-    burst.remove();
     button.classList.remove("is-celebrated");
-  }, profile.flightDuration + 150);
+  }, profile.flightDuration);
 }
 
 function renderLoading(text, rect) {
@@ -526,6 +523,9 @@ function renderResult(result, text, rect) {
 
   const sourceZone = formatSourceZone(result);
   const targetZone = formatTargetZone(result);
+  const celebrateAction = vipEnabled
+    ? `<button type="button" class="celebrate" aria-label="接案順心" title="接案順心" data-action="celebrate">${icon("spark")}<span>接案順心</span></button>`
+    : "";
   const source = escapeHtml(sourceZone);
   const relationLabels = { before: "不晚于", by: "截止", after: "之后", at: "时间点", between: "时间范围", from: "时间范围" };
   const assumptions = (result.assumptions || []).map((item) => `<div>· ${escapeHtml(item)}</div>`).join("");
@@ -557,7 +557,7 @@ function renderResult(result, text, rect) {
         </div>
       </div>
       <div class="toolbar">
-        <button type="button" class="celebrate" aria-label="接案順心" title="接案順心" data-action="celebrate">${icon("spark")}<span>接案順心</span></button>
+        ${celebrateAction}
         <button class="copy" aria-label="复制北京时间" title="复制北京时间" data-action="copy" data-copy="${escapeHtml(result.displayText)}">${icon("copy")}</button>
         <button class="refresh" aria-label="重新解析" title="重新解析" data-action="refresh">${icon("refresh")}</button>
         ${reportButton()}
@@ -697,6 +697,7 @@ function handleTooltipClick(event) {
     const retryRect = currentAnchorRect;
     if (retryText) renderAndParse({ text: retryText, rect: retryRect, referenceContext: currentReferenceContext }, true);
   } else if (action === "celebrate") {
+    if (!vipEnabled) return;
     triggerCelebration(button);
   } else if (action === "report") {
     if (!currentText || reportState === "sending" || reportState === "sent") return;

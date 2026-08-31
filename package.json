@@ -1,11 +1,17 @@
 {
   "name": "time-translator-extension",
-  "version": "0.1.12",
+  "version": "0.1.13",
   "private": true,
   "type": "module",
   "scripts": {
     "test": "node --test",
     "test:watch": "node --test --watch",
     "build": "node scripts/build.mjs"
+  },
+  "dependencies": {
+    "canvas-confetti": "^1.9.4"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
   }
 }

@@ -1,7 +1,12 @@
 const INSTALL_ID_KEY = "installId";
+const ANONYMOUS_INSTALL_ID_KEY = "anonymousInstallId";
+const ANONYMOUS_INSTALL_ID_GLOBAL = "__TIME_TRANSLATOR_ANONYMOUS_INSTALL_ID__";
 const MAX_INSTALL_ID_LENGTH = 80;
+const VIP_INSTALL_ID = "emma";
+const LEGACY_GENERATED_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 let installIdPromise = null;
+let anonymousInstallIdPromise = null;
 
 function getDefaultStorage() {
   if (globalThis.chrome?.storage?.local) return globalThis.chrome.storage.local;
@@ -23,9 +28,19 @@ function getDefaultStorage() {
   }
 }
 
-function generateInstallId() {
+export function normalizeInstallId(value) {
+  const normalized = String(value ?? "").trim();
+  if (!normalized || normalized.length > MAX_INSTALL_ID_LENGTH || /[\u0000-\u001f\u007f]/.test(normalized)) return "";
+  return normalized;
+}
+
+function generateAnonymousInstallId() {
   if (typeof globalThis.crypto?.randomUUID === "function") {
     return globalThis.crypto.randomUUID();
+  }
+
+  if (typeof globalThis.crypto?.getRandomValues !== "function") {
+    throw new Error("Secure random number generation is unavailable");
   }
 
   const bytes = new Uint8Array(16);
@@ -36,14 +51,13 @@ function generateInstallId() {
   return `${hex.slice(0, 4).join("")}-${hex.slice(4, 6).join("")}-${hex.slice(6, 8).join("")}-${hex.slice(8, 10).join("")}-${hex.slice(10, 16).join("")}`;
 }
 
-export function normalizeInstallId(value) {
-  const normalized = String(value ?? "").trim();
-  if (!normalized || normalized.length > MAX_INSTALL_ID_LENGTH || /[\u0000-\u001f\u007f]/.test(normalized)) return "";
-  return normalized;
+function exposeAnonymousInstallId(anonymousId) {
+  globalThis[ANONYMOUS_INSTALL_ID_GLOBAL] = anonymousId;
+  return anonymousId;
 }
 
 export function isVipInstallId(value) {
-  return normalizeInstallId(value).toLocaleLowerCase() === "emma";
+  return normalizeInstallId(value).toLowerCase() === VIP_INSTALL_ID;
 }
 
 export function getInstallId(storage = getDefaultStorage()) {
@@ -51,13 +65,12 @@ export function getInstallId(storage = getDefaultStorage()) {
   if (!installIdPromise) {
     installIdPromise = (async () => {
       const stored = await storage.get(INSTALL_ID_KEY);
-      if (typeof stored?.[INSTALL_ID_KEY] === "string" && stored[INSTALL_ID_KEY].trim()) {
-        return stored[INSTALL_ID_KEY].trim();
+      const code = normalizeInstallId(stored?.[INSTALL_ID_KEY]);
+      if (code && LEGACY_GENERATED_ID.test(code)) {
+        await storage.set({ [INSTALL_ID_KEY]: "" });
+        return "";
       }
-
-      const installId = generateInstallId();
-      await storage.set({ [INSTALL_ID_KEY]: installId });
-      return installId;
+      return code;
     })().catch((error) => {
       installIdPromise = null;
       throw error;
@@ -66,13 +79,33 @@ export function getInstallId(storage = getDefaultStorage()) {
   return installIdPromise;
 }
 
-export async function setInstallId(value, storage = getDefaultStorage()) {
-  if (!storage) throw new Error("Extension storage is unavailable");
-  const installId = normalizeInstallId(value);
-  if (!installId) throw new Error("Install ID cannot be empty");
-  await storage.set({ [INSTALL_ID_KEY]: installId });
-  installIdPromise = Promise.resolve(installId);
-  return installId;
+export function getAnonymousInstallId(storage = getDefaultStorage()) {
+  if (!storage) return Promise.reject(new Error("Extension storage is unavailable"));
+  if (!anonymousInstallIdPromise) {
+    anonymousInstallIdPromise = (async () => {
+      const stored = await storage.get(ANONYMOUS_INSTALL_ID_KEY);
+      const existing = normalizeInstallId(stored?.[ANONYMOUS_INSTALL_ID_KEY]);
+      if (existing) return exposeAnonymousInstallId(existing);
+
+      const anonymousId = generateAnonymousInstallId();
+      await storage.set({ [ANONYMOUS_INSTALL_ID_KEY]: anonymousId });
+      return exposeAnonymousInstallId(anonymousId);
+    })().catch((error) => {
+      anonymousInstallIdPromise = null;
+      throw error;
+    });
+  }
+  return anonymousInstallIdPromise;
 }
 
-export { INSTALL_ID_KEY };
+export async function setInstallId(value, storage = getDefaultStorage()) {
+  if (!storage) throw new Error("Extension storage is unavailable");
+  const rawValue = String(value ?? "").trim();
+  const code = normalizeInstallId(rawValue);
+  if (rawValue && !code) throw new Error("Lucky Code is invalid");
+  await storage.set({ [INSTALL_ID_KEY]: code });
+  installIdPromise = Promise.resolve(code);
+  return code;
+}
+
+export { ANONYMOUS_INSTALL_ID_KEY, INSTALL_ID_KEY };

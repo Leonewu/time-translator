@@ -126,20 +126,37 @@ test("Popup 提供自定义关键词输入框", () => {
 test("Popup 提供反馈邮件入口和当前版本号", () => {
   assert.match(popupHtml, /mailto:reon\.hypr@gmail\.com\?subject=Time%20Translator%20Feedback/);
   assert.match(popupHtml, /data-i18n="feedback"/);
-  assert.match(popupHtml, />v0\.1\.12<\/span>/);
+  assert.match(popupHtml, />v0\.1\.13<\/span>/);
   assert.match(popupCss, /\.feedback-link \{[^}]*margin-left:\s*auto/);
-  assert.match(manifest, /"version": "0\.1\.12"/);
+  assert.match(manifest, /"version": "0\.1\.13"/);
 });
 
 test("Popup 显示可编辑 ID 和 VIP 标识，但不提供复制按钮", () => {
+  assert.match(popupHtml, /data-i18n="installIdLabel">Lucky Code<\/span>/);
+  assert.match(i18nSource, /installIdLabel: "Lucky Code"/);
+  assert.match(i18nSource, /installIdLabel: "幸运代码"/);
+  assert.match(i18nSource, /luckyCodePlaceholder: "Enter Lucky Code"/);
+  assert.match(i18nSource, /luckyCodePlaceholder: "输入幸运代码"/);
   assert.match(popupHtml, /id="installIdValue"[^>]+type="text"/);
   assert.match(popupHtml, /id="vipBadge"/);
   assert.doesNotMatch(popupHtml, /id="copyInstallId"/);
+  assert.match(popupJs, /getAnonymousInstallId/);
   assert.match(popupJs, /getInstallId/);
   assert.match(popupJs, /setInstallId/);
   assert.match(popupJs, /isVipInstallId/);
+  assert.match(popupJs, /let installIdInputDirty = false/);
+  assert.match(popupJs, /if \(installIdInputDirty\) return;/);
+  assert.match(popupJs, /installIdInputDirty = true/);
+  assert.match(popupJs, /if \(!value\) \{[\s\S]*await setInstallId\(""\)/);
   assert.match(popupCss, /\.install-id-row/);
   assert.match(popupCss, /\.vip-badge/);
+  assert.match(popupCss, /\.vip-badge\[hidden\] \{[^}]*display:\s*none/);
+  assert.match(popupCss, /--vip-fill:\s*#eee9ff/);
+  assert.match(popupCss, /--vip-star:\s*#6d51e8/);
+  assert.match(popupCss, /--vip-fill:\s*rgba\(169, 124, 255/);
+  assert.match(popupCss, /animation: vip-breathe 2\.8s ease-in-out infinite/);
+  assert.match(popupCss, /@keyframes vip-breathe/);
+  assert.match(popupCss, /prefers-reduced-motion: reduce/);
 });
 
 test("Popup 不承载搞定晒按钮和彩纸效果", () => {

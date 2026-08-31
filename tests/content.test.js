@@ -85,22 +85,30 @@ test("成功和失败 Tooltip 都提供手动重新解析按钮", () => {
   assert.match(contentSource, /renderAndParse\(\{ text: retryText, rect: retryRect, referenceContext: currentReferenceContext \}, true\)/);
 });
 
-test("成功转换后的 Tooltip 提供接案順心按钮和蓄力彩纸效果", () => {
+test("成功转换后的 Tooltip 提供接案順心按钮和 Canvas 蓄力彩纸效果", () => {
+  assert.match(contentSource, /import \{ getAnonymousInstallId, getInstallId, isVipInstallId \} from "\.\/shared\/install-id\.js"/);
+  assert.match(contentSource, /getAnonymousInstallId\(\)/);
+  assert.match(contentSource, /vipEnabled = isVipInstallId\(installId\)/);
+  assert.match(contentSource, /const celebrateAction = vipEnabled/);
   assert.match(contentSource, /data-action="celebrate"/);
   assert.match(contentSource, /接案順心/);
   assert.match(contentSource, /<div class="card">[\s\S]*<div class="celebration-layer" aria-hidden="true"><\/div>[\s\S]*data-action="celebrate"/);
   assert.match(contentSource, /function triggerCelebration/);
   assert.match(contentSource, /function getCelebrationProfile/);
-  assert.match(contentSource, /pieceCount/);
-  assert.match(contentSource, /rayLength/);
+  assert.match(contentSource, /canvas-confetti/);
+  assert.match(contentSource, /confetti\.create/);
+  assert.match(contentSource, /celebration-canvas/);
+  assert.match(contentSource, /time-translator-celebration-canvas/);
+  assert.match(contentSource, /position: "fixed"/);
+  assert.match(contentSource, /resize: true/);
+  assert.match(contentSource, /document\.documentElement\.append\(canvas\)/);
+  assert.match(contentSource, /globalThis\.innerWidth/);
+  assert.match(contentSource, /particleCount/);
+  assert.match(contentSource, /shapes: \["square", "circle", "star"\]/);
   assert.match(contentSource, /flightDuration/);
   assert.match(contentSource, /celebration-layer/);
-  assert.match(contentSource, /celebration-burst/);
-  assert.match(contentSource, /celebration-ray/);
-  assert.match(contentSource, /celebration-ring/);
-  assert.match(contentSource, /celebration-flash/);
-  assert.match(contentSource, /is-ribbon/);
-  assert.match(contentSource, /burst\.remove\(\)/);
+  assert.doesNotMatch(contentSource, /celebration-ray|celebration-ring|celebration-flash/);
+  assert.doesNotMatch(contentSource, /celebration-burst|celebration-piece/);
   assert.doesNotMatch(contentSource, /layer\.replaceChildren\(\)/);
   assert.match(contentSource, /celebrateButton\.addEventListener\("click"/);
   assert.match(contentSource, /celebrateButton\.addEventListener\("pointerdown"/);
@@ -108,12 +116,12 @@ test("成功转换后的 Tooltip 提供接案順心按钮和蓄力彩纸效果",
   assert.match(contentSource, /celebrateButton\.addEventListener\("pointercancel"/);
   assert.match(contentSource, /is-charging/);
   assert.match(contentSource, /pendingHoldDuration/);
-  assert.match(contentSource, /piece\.animate\(/);
   assert.match(contentSource, /function isEventInsideTooltip/);
   assert.match(contentSource, /event\.composedPath\?\.\(\)/);
   assert.match(contentSource, /function getTooltipButton/);
   assert.doesNotMatch(contentSource, /lastCelebrateAt|celebratedAt|celebrationDebug|TT-celebrate/);
   assert.match(contentSource, /action === "celebrate"/);
+  assert.match(contentSource, /if \(!vipEnabled\) return;/);
 });
 
 test("Tooltip 提供抱怨按钮，并只通过后台上报当前 case", () => {

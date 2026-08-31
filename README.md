@@ -77,7 +77,7 @@ Popup 底部提供 Feedback 入口，可以直接联系 `reon.hypr@gmail.com` �
 
 ## 当前版本
 
-- `0.1.12`
+- `0.1.13`
 - Popup 支持日间/夜间模式，偏好会自动保存
 - 当前 IP Logo 会以低透明度水印嵌入 Popup 背景，随日间/夜间模式调整
 - 默认目标时区 `Asia/Shanghai`

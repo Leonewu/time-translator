@@ -1,6 +1,6 @@
 import { createSettingsSaver, getProviderPreset, loadSettings, normalizeCustomKeywords, PROVIDER_PRESETS, saveSettings } from "./shared/config.js";
 import { applyI18n, getMessage as t } from "./shared/i18n.js";
-import { getInstallId, isVipInstallId, setInstallId } from "./shared/install-id.js";
+import { getAnonymousInstallId, getInstallId, isVipInstallId, setInstallId } from "./shared/install-id.js";
 import { listAvailableModels } from "./shared/llm.js";
 
 applyI18n();
@@ -34,7 +34,12 @@ let themeMode = "system";
 let activeProvider = "";
 let installIdSaveTimer;
 let currentInstallId = "";
+let installIdInputDirty = false;
 const saveSettingsInOrder = createSettingsSaver(saveSettings);
+
+void getAnonymousInstallId().catch(() => {
+  // The anonymous ID is not displayed in the popup.
+});
 
 for (const [key, value] of Object.entries(PROVIDER_PRESETS)) {
   const option = document.createElement("option");
@@ -250,13 +255,15 @@ function runTest() {
 async function loadInstallId() {
   try {
     const installId = await getInstallId();
+    if (installIdInputDirty) return;
     currentInstallId = installId;
     installIdValue.value = installId;
     installIdValue.title = installId;
     updateVipBadge(installId);
   } catch {
+    if (installIdInputDirty) return;
     installIdValue.value = "";
-    installIdValue.placeholder = t("installIdUnavailable");
+    installIdValue.placeholder = t("luckyCodeUnavailable");
   }
 }
 
@@ -267,8 +274,17 @@ function updateVipBadge(value) {
 async function persistInstallId() {
   const value = installIdValue.value.trim();
   if (!value) {
-    installIdValue.value = currentInstallId;
-    updateVipBadge(currentInstallId);
+    try {
+      currentInstallId = await setInstallId("");
+      installIdValue.value = "";
+      installIdValue.title = "";
+      updateVipBadge("");
+      saveStatus.textContent = t("saved");
+    } catch {
+      installIdValue.value = currentInstallId;
+      installIdValue.title = currentInstallId;
+      updateVipBadge(currentInstallId);
+    }
     return;
   }
   try {
@@ -279,6 +295,7 @@ async function persistInstallId() {
     saveStatus.textContent = t("saved");
   } catch {
     installIdValue.value = currentInstallId;
+    installIdValue.title = currentInstallId;
     updateVipBadge(currentInstallId);
   }
 }
@@ -366,6 +383,7 @@ async function init() {
   });
   loadInstallId();
   installIdValue.addEventListener("input", () => {
+    installIdInputDirty = true;
     updateVipBadge(installIdValue.value);
     scheduleInstallIdSave();
   });
