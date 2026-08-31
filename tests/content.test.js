@@ -146,7 +146,7 @@ test("VIP 彩蛋支持十秒十次点击，长按复用普通蓄力彩带", () =
   assert.match(contentSource, /celebration-message/);
 });
 
-test("长按超过 1 秒先倾斜颤抖，松手后恢复普通蓄力彩带", () => {
+test("长按超过 1 秒先倾斜颤抖，松手后恢复普通蓄力彩带并显示紫色 emma", () => {
   assert.match(contentSource, /const CELEBRATION_SHAKE_THRESHOLD_MS = 1_000/);
   assert.match(contentSource, /shakeTimer = setTimeout\(\(\) => \{/);
   assert.match(contentSource, /celebrateButton\.classList\.add\("is-charging"\)/);
@@ -155,6 +155,8 @@ test("长按超过 1 秒先倾斜颤抖，松手后恢复普通蓄力彩带", ()
   assert.match(contentSource, /\.celebrate\.is-charging-shake \{ animation: celebrate-charge-wiggle \.4s/);
   assert.match(contentSource, /@keyframes celebrate-charge-wiggle/);
   assert.match(contentSource, /const holdDuration = pendingHoldDuration \|\| 0/);
+  assert.match(contentSource, /const isLongPress = holdDuration >= CELEBRATION_SHAKE_THRESHOLD_MS/);
+  assert.match(contentSource, /if \(isLongPress\) \{[\s\S]*triggerCelebration\(celebrateButton, holdDuration\);[\s\S]*showEasterEggMessage\(celebrateButton, \{ color: "#7c5cfc", shadowColor: "rgba\(124, 92, 252, \.36\)" \}\);[\s\S]*return;/);
   assert.match(contentSource, /if \(!isClickEasterEgg\) triggerCelebration\(celebrateButton, holdDuration\)/);
   assert.doesNotMatch(contentSource, /LONG_HOLD_HEART_COLORS|fallingMessage|getFallingMessageShape|isLongPressEasterEgg|pendingLongPress|longPressReady/);
   const startShakeTimerBlock = contentSource.match(/const startShakeTimer = \(\) => \{[\s\S]*?\n    \};/)?.[0] || "";

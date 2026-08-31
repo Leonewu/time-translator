@@ -712,6 +712,12 @@ function renderResult(result, text, rect) {
       event.stopImmediatePropagation();
       const holdDuration = pendingHoldDuration || 0;
       pendingHoldDuration = null;
+      const isLongPress = holdDuration >= CELEBRATION_SHAKE_THRESHOLD_MS;
+      if (isLongPress) {
+        triggerCelebration(celebrateButton, holdDuration);
+        showEasterEggMessage(celebrateButton, { color: "#7c5cfc", shadowColor: "rgba(124, 92, 252, .36)" });
+        return;
+      }
       const isClickEasterEgg = recordCelebrationClick(celebrateButton);
       if (!isClickEasterEgg) triggerCelebration(celebrateButton, holdDuration);
     };
