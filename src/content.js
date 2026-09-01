@@ -38,7 +38,14 @@ const COMBO_CELEBRATION_THEMES = [
     fallbackShapes: ["star", "star", "square", "square"],
   },
 ];
-const CLICK_EASTER_EGG_MESSAGES = ["🧩 {name}~", "对不起！😣"];
+const CLICK_EASTER_EGG_MESSAGES = [
+  "🧩 {name}~",
+  "真的很抱歉...",
+  "希望看到这里的时候，你今天心情不错。🎉",
+  "希望你正在过一个普通但舒服的下午。",
+  "希望你今天能看到好看的夕阳🌇和月亮🌙",
+  "随时 feedback 我，if needs",
+];
 const CELEBRATION_CLICK_LIMIT = 10;
 const CELEBRATION_CLICK_WINDOW_MS = 10_000;
 const CELEBRATION_COMBO_IDLE_MS = 3_000;
@@ -402,7 +409,7 @@ function tooltipStyles() {
     .celebration-layer { inset: -22px; overflow: visible; pointer-events: none; position: absolute; z-index: 3; }
     .celebration-canvas { display: block; height: 100%; left: 0; pointer-events: none; position: absolute; top: 0; width: 100%; }
     @keyframes celebrate-pop { 0%, 100% { transform: scale(1); } 45% { transform: scale(1.08) rotate(-2deg); } 72% { transform: scale(.98) rotate(1deg); } }
-    .celebration-message { animation: celebration-message-pop 1.9s cubic-bezier(.2, .82, .25, 1) forwards; color: #ef5b8b; font-size: 13px; font-weight: 800; left: 50%; line-height: 1; position: absolute; text-shadow: 0 2px 8px rgba(239, 91, 139, .24); top: 42%; transform: translate(-50%, -50%); white-space: nowrap; }
+    .celebration-message { animation: celebration-message-pop 1.9s cubic-bezier(.2, .82, .25, 1) forwards; color: #ef5b8b; font-size: 13px; font-weight: 800; left: 50%; line-height: 1.25; position: absolute; text-align: center; text-shadow: 0 2px 8px rgba(239, 91, 139, .24); top: 42%; transform: translate(-50%, -50%); white-space: pre-line; }
     @keyframes celebrate-charge-wiggle { 0%, 18% { transform: scale(1.04) rotate(-1.4deg); } 36% { transform: scale(1.04) translateX(-1.5px) rotate(-.7deg); } 54% { transform: scale(1.04) translateX(1.5px) rotate(.8deg); } 72% { transform: scale(1.04) translateX(-1px) rotate(-.5deg); } 100% { transform: scale(1.04) translateX(1px) rotate(.4deg); } }
     @keyframes celebration-message-pop { 0% { opacity: 0; transform: translate(-50%, -20%) scale(.72) rotate(-5deg); } 18% { opacity: 1; transform: translate(-50%, -50%) scale(1.08) rotate(2deg); } 70% { opacity: 1; transform: translate(-50%, -105%) scale(1); } 100% { opacity: 0; transform: translate(-50%, -155%) scale(.92); } }
     @media (prefers-reduced-motion: reduce) {
