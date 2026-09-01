@@ -24,7 +24,20 @@ let magicCode = "";
 
 const POINTER_MOVE_THRESHOLD = 4;
 const CELEBRATION_COLORS = ["#7c5cfc", "#a97cff", "#d48bff", "#4d427f", "#ffbd32"];
-const HEART_CELEBRATION_COLORS = ["#ef5b8b", "#ff79a8", "#d48bff", "#a97cff", "#ffbd32"];
+const COMBO_CELEBRATION_THEMES = [
+  {
+    colors: ["#4b2e83", "#6d4aff", "#a78bfa", "#f2b134", "#ffd166", "#fff0b3"],
+    customShape: "rounded-diamond",
+    supportingShapes: ["star", "star"],
+    fallbackShapes: ["star", "star", "circle", "circle"],
+  },
+  {
+    colors: ["#3b1e8a", "#7c3aed", "#c084fc", "#f59e0b", "#fde68a"],
+    customShape: "four-point-sparkle",
+    supportingShapes: ["square", "square"],
+    fallbackShapes: ["star", "star", "square", "square"],
+  },
+];
 const CLICK_EASTER_EGG_MESSAGES = ["🧩 {name}~", "对不起！😣"];
 const CELEBRATION_CLICK_LIMIT = 10;
 const CELEBRATION_CLICK_WINDOW_MS = 10_000;
@@ -32,10 +45,11 @@ const CELEBRATION_COMBO_IDLE_MS = 3_000;
 const CELEBRATION_SHAKE_THRESHOLD_MS = 1_000;
 let confettiCanvas = null;
 let confettiInstance = null;
-const heartShapes = new Map();
 const celebrationClickStates = new WeakMap();
 const comboTransparencyTimers = new WeakMap();
+const comboShapes = new Map();
 let clickEasterEggMessageIndex = 0;
+let comboThemeIndex = 0;
 
 const explicitTwelveHourTime = /\b(?:0?[1-9]|1[0-2])(?::[0-5]\d)?\s*(?:a\.?m\.?|p\.?m\.?)\b/i;
 const explicitTwentyFourHourTime = /\b(?:[01]?\d|2[0-3]):[0-5]\d\b/;
@@ -388,9 +402,9 @@ function tooltipStyles() {
     .celebration-layer { inset: -22px; overflow: visible; pointer-events: none; position: absolute; z-index: 3; }
     .celebration-canvas { display: block; height: 100%; left: 0; pointer-events: none; position: absolute; top: 0; width: 100%; }
     @keyframes celebrate-pop { 0%, 100% { transform: scale(1); } 45% { transform: scale(1.08) rotate(-2deg); } 72% { transform: scale(.98) rotate(1deg); } }
-    .celebration-message { animation: celebration-heart-pop 1.9s cubic-bezier(.2, .82, .25, 1) forwards; color: #ef5b8b; font-size: 13px; font-weight: 800; left: 50%; line-height: 1; position: absolute; text-shadow: 0 2px 8px rgba(239, 91, 139, .24); top: 42%; transform: translate(-50%, -50%); white-space: nowrap; }
+    .celebration-message { animation: celebration-message-pop 1.9s cubic-bezier(.2, .82, .25, 1) forwards; color: #ef5b8b; font-size: 13px; font-weight: 800; left: 50%; line-height: 1; position: absolute; text-shadow: 0 2px 8px rgba(239, 91, 139, .24); top: 42%; transform: translate(-50%, -50%); white-space: nowrap; }
     @keyframes celebrate-charge-wiggle { 0%, 18% { transform: scale(1.04) rotate(-1.4deg); } 36% { transform: scale(1.04) translateX(-1.5px) rotate(-.7deg); } 54% { transform: scale(1.04) translateX(1.5px) rotate(.8deg); } 72% { transform: scale(1.04) translateX(-1px) rotate(-.5deg); } 100% { transform: scale(1.04) translateX(1px) rotate(.4deg); } }
-    @keyframes celebration-heart-pop { 0% { opacity: 0; transform: translate(-50%, -20%) scale(.72) rotate(-5deg); } 18% { opacity: 1; transform: translate(-50%, -50%) scale(1.08) rotate(2deg); } 70% { opacity: 1; transform: translate(-50%, -105%) scale(1); } 100% { opacity: 0; transform: translate(-50%, -155%) scale(.92); } }
+    @keyframes celebration-message-pop { 0% { opacity: 0; transform: translate(-50%, -20%) scale(.72) rotate(-5deg); } 18% { opacity: 1; transform: translate(-50%, -50%) scale(1.08) rotate(2deg); } 70% { opacity: 1; transform: translate(-50%, -105%) scale(1); } 100% { opacity: 0; transform: translate(-50%, -155%) scale(.92); } }
     @media (prefers-reduced-motion: reduce) {
       .celebrate.is-celebrated { animation: none; }
       .celebrate.is-charging-shake { animation: none; }
@@ -468,17 +482,6 @@ function getConfettiInstance() {
   return confettiInstance;
 }
 
-function getHeartShape(color = "#ef5b8b") {
-  if (heartShapes.has(color) || typeof confetti.shapeFromText !== "function") return heartShapes.get(color) || null;
-  try {
-    const shape = confetti.shapeFromText({ text: "♥", scalar: 1.35, color });
-    heartShapes.set(color, shape);
-  } catch {
-    // Fall back to built-in shapes if this browser cannot rasterize text shapes.
-  }
-  return heartShapes.get(color) || null;
-}
-
 function getCelebrationOrigin(button) {
   const buttonRect = button.getBoundingClientRect();
   const viewportWidth = Math.max(1, globalThis.innerWidth || 1);
@@ -497,7 +500,37 @@ function formatCelebrationMessage(message) {
   return String(message || "").replaceAll("{name}", getCelebrationName());
 }
 
-function showEasterEggMessage(button, { color = "#ef5b8b", shadowColor = "rgba(239, 91, 139, .24)", text = `♥ ${getCelebrationName()}~` } = {}) {
+function getComboShape(name) {
+  if (comboShapes.has(name) || typeof confetti.shapeFromPath !== "function") return comboShapes.get(name) || null;
+  const paths = {
+    "rounded-diamond": "M5 .5C5.5 1.3 8.7 4.4 9.5 5 8.7 5.6 5.5 8.7 5 9.5 4.5 8.7 1.3 5.6 .5 5 1.3 4.4 4.5 1.3 5 .5Z",
+    "four-point-sparkle": "M5 0C5.7 3.6 6.4 4.3 10 5 6.4 5.7 5.7 6.4 5 10 4.3 6.4 3.6 5.7 0 5 3.6 4.3 4.3 3.6 5 0Z",
+  };
+  const matrices = {
+    // The sparkle fills its box more completely than the built-in star, so
+    // keep the same visual weight by rendering it at roughly 68% scale.
+    "four-point-sparkle": [0.68, 0, 0, 0.68, -3.4, -3.4],
+  };
+  try {
+    const shape = confetti.shapeFromPath({ path: paths[name], matrix: matrices[name] });
+    comboShapes.set(name, shape);
+  } catch {
+    // Fall back to the theme's built-in shapes if Path2D is unavailable.
+  }
+  return comboShapes.get(name) || null;
+}
+
+function getNextComboTheme() {
+  const theme = COMBO_CELEBRATION_THEMES[comboThemeIndex % COMBO_CELEBRATION_THEMES.length];
+  comboThemeIndex = (comboThemeIndex + 1) % COMBO_CELEBRATION_THEMES.length;
+  const customShape = getComboShape(theme.customShape);
+  return {
+    colors: theme.colors,
+    shapes: customShape ? [customShape, customShape, ...theme.supportingShapes] : theme.fallbackShapes,
+  };
+}
+
+function showEasterEggMessage(button, { color = "#ef5b8b", shadowColor = "rgba(239, 91, 139, .24)", text = `🧩 ${getCelebrationName()}~` } = {}) {
   const card = button.closest(".card") || button.getRootNode?.().querySelector?.(".card");
   const layer = card?.querySelector(".celebration-layer");
   if (!card || !layer) return;
@@ -524,11 +557,10 @@ function activateComboTransparency(button) {
   comboTransparencyTimers.set(card, timer);
 }
 
-function triggerHeartCelebration(button, { colors = HEART_CELEBRATION_COLORS, heartColor = "#ef5b8b", messageText = `♥ ${getCelebrationName()}~` } = {}) {
+function triggerComboCelebration(button, { messageText = `🧩 ${getCelebrationName()}~` } = {}) {
   const origin = getCelebrationOrigin(button);
   const shoot = getConfettiInstance();
-  const heart = getHeartShape(heartColor);
-  const shapes = heart ? [heart, heart, "circle", "star"] : ["circle", "circle", "star"];
+  const { colors, shapes } = getNextComboTheme();
   shoot({
     angle: 90,
     colors,
@@ -565,7 +597,7 @@ function recordCelebrationClick(button) {
     return false;
   }
   celebrationClickStates.delete(button);
-  triggerHeartCelebration(button, { messageText: consumeClickEasterEggMessage() });
+  triggerComboCelebration(button, { messageText: consumeClickEasterEggMessage() });
   return true;
 }
 

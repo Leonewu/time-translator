@@ -137,11 +137,19 @@ test("VIP 彩蛋支持十秒十次点击，长按复用普通蓄力彩带", () =
   assert.match(contentSource, /const CELEBRATION_CLICK_WINDOW_MS = 10_000/);
   assert.match(contentSource, /const CELEBRATION_COMBO_IDLE_MS = 3_000/);
   assert.doesNotMatch(contentSource, /CELEBRATION_HOLD_EASTER_EGG_MS/);
-  assert.match(contentSource, /function getHeartShape/);
-  assert.match(contentSource, /shapeFromText\(\{ text: "♥"/);
-  assert.match(contentSource, /const heartShapes = new Map\(\)/);
-  assert.match(contentSource, /function triggerHeartCelebration/);
-  assert.match(contentSource, /getHeartShape\(heartColor\)/);
+  assert.match(contentSource, /function triggerComboCelebration/);
+  assert.match(contentSource, /const COMBO_CELEBRATION_THEMES = \[[\s\S]*colors: \["#4b2e83", "#6d4aff", "#a78bfa", "#f2b134", "#ffd166", "#fff0b3"\][\s\S]*customShape: "rounded-diamond"[\s\S]*supportingShapes: \["star", "star"\][\s\S]*colors: \["#3b1e8a", "#7c3aed", "#c084fc", "#f59e0b", "#fde68a"\][\s\S]*customShape: "four-point-sparkle"[\s\S]*supportingShapes: \["square", "square"\]/);
+  assert.match(contentSource, /const comboShapes = new Map\(\)/);
+  assert.match(contentSource, /function getComboShape/);
+  assert.match(contentSource, /confetti\.shapeFromPath\(\{\s*path: paths\[name\], matrix: matrices\[name\]\s*\}\)/);
+  assert.match(contentSource, /"four-point-sparkle": \[0\.68, 0, 0, 0\.68, -3\.4, -3\.4\]/);
+  assert.match(contentSource, /let comboThemeIndex = 0/);
+  assert.match(contentSource, /function getNextComboTheme/);
+  assert.match(contentSource, /comboThemeIndex = \(comboThemeIndex \+ 1\) % COMBO_CELEBRATION_THEMES\.length/);
+  assert.match(contentSource, /const \{ colors, shapes \} = getNextComboTheme\(\)/);
+  assert.doesNotMatch(contentSource, /♥|getHeartShape|heartShapes|shapeFromText|triggerHeartCelebration|HEART_CELEBRATION_COLORS|COMBO_CELEBRATION_COLORS/);
+  assert.match(contentSource, /color = "#ef5b8b"/);
+  assert.doesNotMatch(contentSource, /#ff79a8|celebration-heart-pop/);
   assert.match(contentSource, /const CLICK_EASTER_EGG_MESSAGES = \["🧩 \{name\}~", "对不起！😣"\]/);
   assert.match(contentSource, /function getCelebrationName/);
   assert.match(contentSource, /return String\(magicCode \|\| ""\)\.trim\(\)/);
@@ -152,7 +160,7 @@ test("VIP 彩蛋支持十秒十次点击，长按复用普通蓄力彩带", () =
   assert.match(contentSource, /message\.textContent = text/);
   assert.match(contentSource, /function consumeClickEasterEggMessage/);
   assert.match(contentSource, /clickEasterEggMessageIndex = \(clickEasterEggMessageIndex \+ 1\) % CLICK_EASTER_EGG_MESSAGES\.length/);
-  assert.match(contentSource, /triggerHeartCelebration\(button, \{ messageText: consumeClickEasterEggMessage\(\) \}\)/);
+  assert.match(contentSource, /triggerComboCelebration\(button, \{ messageText: consumeClickEasterEggMessage\(\) \}\)/);
   assert.match(contentSource, /const comboTransparencyTimers = new WeakMap\(\)/);
   assert.match(contentSource, /function activateComboTransparency/);
   assert.match(contentSource, /card\.classList\.add\("is-combo-celebrating"\)/);
@@ -169,7 +177,6 @@ test("VIP 彩蛋支持十秒十次点击，长按复用普通蓄力彩带", () =
   assert.doesNotMatch(contentSource, /holdTimer|holdThresholdReached|holdEasterEggPending|markHoldThreshold/);
   assert.match(contentSource, /const holdDuration = pendingHoldDuration \|\| 0/);
   assert.match(contentSource, /triggerCelebration\(celebrateButton, holdDuration\)/);
-  assert.match(contentSource, /HEART_CELEBRATION_COLORS/);
   assert.match(contentSource, /celebration-message/);
 });
 
@@ -187,7 +194,7 @@ test("长按超过 1 秒先倾斜颤抖，松手后恢复普通蓄力彩带并�
   assert.match(contentSource, /if \(!isClickEasterEgg\) triggerCelebration\(celebrateButton, holdDuration\)/);
   assert.doesNotMatch(contentSource, /LONG_HOLD_HEART_COLORS|fallingMessage|getFallingMessageShape|isLongPressEasterEgg|pendingLongPress|longPressReady/);
   const startShakeTimerBlock = contentSource.match(/const startShakeTimer = \(\) => \{[\s\S]*?\n    \};/)?.[0] || "";
-  assert.doesNotMatch(startShakeTimerBlock, /triggerHeartCelebration/);
+  assert.doesNotMatch(startShakeTimerBlock, /triggerComboCelebration/);
 });
 
 test("Tooltip 提供抱怨按钮，并只通过后台上报当前 case", () => {
