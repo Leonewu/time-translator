@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createSettingsSaver, mergeSettings, PROVIDER_PRESETS } from "../src/shared/config.js";
+import { createSettingsSaver, isBlockedSite, mergeSettings, normalizeBlockedSites, PROVIDER_PRESETS } from "../src/shared/config.js";
 
 test("插件开关默认开启，并能从设置中持久化关闭状态", () => {
   assert.equal(mergeSettings().autoConvert, true);
@@ -30,6 +30,13 @@ test("自定义关键词会被清理、去重并持久化", () => {
 test("自定义关键词支持换行、逗号和分号，短语中的空格需要保留", () => {
   const settings = mergeSettings({ customKeywords: " select \n SELECT, release window ; EOD " });
   assert.deepEqual(settings.customKeywords, ["select", "release window", "EOD"]);
+});
+
+test("屏蔽网页配置会规范化域名、支持子域名并去重", () => {
+  assert.deepEqual(normalizeBlockedSites(" notion.so\nhttps://www.example.com/path, *.notion.so; notion.so "), ["notion.so", "www.example.com"]);
+  assert.equal(isBlockedSite("www.notion.so", ["notion.so"]), true);
+  assert.equal(isBlockedSite("notion-so.com", ["notion.so"]), false);
+  assert.deepEqual(mergeSettings({ blockedSites: ["notion.so"] }).blockedSites, ["notion.so"]);
 });
 
 test("连续自动保存按输入顺序写入，最后一个关键词不会被旧写入覆盖", async () => {

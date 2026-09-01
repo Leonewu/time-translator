@@ -30,12 +30,6 @@
   --button-hover: #ffd36b;
   --scroll-thumb: rgba(41, 54, 95, .28);
   --scroll-thumb-hover: rgba(41, 54, 95, .46);
-  --vip-ink: #4f38b8;
-  --vip-fill: #eee9ff;
-  --vip-line: #b8a8f5;
-  --vip-star: #6d51e8;
-  --vip-ring-strong: rgba(124, 92, 252, .18);
-  --vip-glow: rgba(124, 92, 252, .2);
   font-family: "Avenir Next", "Segoe UI", ui-sans-serif, sans-serif;
 }
 
@@ -53,12 +47,6 @@
   --code: #b6c7bc;
   --scroll-thumb: rgba(255, 253, 248, .28);
   --scroll-thumb-hover: rgba(255, 253, 248, .48);
-  --vip-ink: #d9c8ff;
-  --vip-fill: rgba(169, 124, 255, .14);
-  --vip-line: rgba(169, 124, 255, .54);
-  --vip-star: #c1a6ff;
-  --vip-ring-strong: rgba(169, 124, 255, .24);
-  --vip-glow: rgba(169, 124, 255, .3);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -76,12 +64,6 @@
     --code: #b6c7bc;
     --scroll-thumb: rgba(255, 253, 248, .28);
     --scroll-thumb-hover: rgba(255, 253, 248, .48);
-    --vip-ink: #d9c8ff;
-    --vip-fill: rgba(169, 124, 255, .14);
-    --vip-line: rgba(169, 124, 255, .54);
-    --vip-star: #c1a6ff;
-    --vip-ring-strong: rgba(169, 124, 255, .24);
-    --vip-glow: rgba(169, 124, 255, .3);
   }
 }
 
@@ -144,6 +126,12 @@ button { cursor: pointer; }
 .section-heading span { color: var(--lime); font-family: ui-monospace, SFMono-Regular, monospace; font-size: 10px; }
 .section-heading strong { font-size: 12px; letter-spacing: .03em; }
 .section-heading em { color: var(--faint); font-size: 10px; font-style: normal; margin-left: auto; }
+.optional-block { padding-bottom: 17px; }
+.optional-heading { cursor: pointer; list-style: none; margin-bottom: 0; }
+.optional-heading::-webkit-details-marker { display: none; }
+.optional-heading::after { color: var(--faint); content: "+"; font-family: ui-monospace, SFMono-Regular, monospace; font-size: 12px; margin-left: auto; }
+.optional-block[open] .optional-heading { margin-bottom: 13px; }
+.optional-block[open] .optional-heading::after { content: "−"; }
 .field-grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
 .field-stack { display: grid; gap: 0; }
 .compact-block .field-grid .field-label { line-height: 1.2; min-height: 2.4em; }
@@ -211,14 +199,11 @@ footer { align-items: center; color: var(--faint); display: flex; font-size: 9px
 .install-id-label { color: var(--faint); flex: 0 0 auto; font-family: "Baloo 2", "Arial Rounded MT Bold", system-ui, sans-serif; font-size: 9px; font-weight: 500; letter-spacing: .02em; line-height: 1; }
 .install-id-value { background: transparent; border: 0; border-bottom: 1px dashed var(--line); border-radius: 0; color: var(--muted); flex: 1 1 auto; font-family: "Baloo 2", "Arial Rounded MT Bold", system-ui, sans-serif; font-size: 9px; font-weight: 500; line-height: 1; letter-spacing: .02em; min-width: 0; overflow: hidden; padding: 3px 0 4px; text-overflow: ellipsis; white-space: nowrap; }
 .install-id-value:focus { border-bottom-color: var(--lime); box-shadow: none; }
-.vip-badge { align-items: center; animation: vip-breathe 2.8s ease-in-out infinite; background: var(--vip-fill); border: 1px solid var(--vip-line); border-radius: 999px; box-shadow: 0 1px 4px var(--vip-glow); color: var(--vip-ink); display: inline-flex; flex: 0 0 auto; font-family: "Baloo 2", "Arial Rounded MT Bold", system-ui, sans-serif; font-size: 8px; font-weight: 500; gap: 2px; letter-spacing: .02em; line-height: 1; padding: 2px 5px 2px 4px; }
+.vip-badge { align-items: center; display: inline-flex; flex: 0 0 auto; font-size: 12px; line-height: 1; }
 .vip-badge[hidden] { display: none; }
-.vip-badge-star { align-items: center; color: var(--vip-star); display: inline-flex; flex: 0 0 9px; height: 9px; justify-content: center; text-shadow: 0 0 5px var(--vip-glow); width: 9px; }
-.vip-badge-star svg { display: block; height: 100%; width: 100%; }
-@keyframes vip-breathe {
-  0%, 100% { box-shadow: 0 1px 4px var(--vip-glow); }
-  50% { box-shadow: 0 1px 8px var(--vip-glow), 0 0 0 1px var(--vip-ring-strong); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .vip-badge { animation: none; }
+.vip-badge.is-valid { animation: vip-code-pop .28s ease-out; }
+@keyframes vip-code-pop {
+  0% { opacity: .45; transform: scale(.75); }
+  70% { transform: scale(1.16); }
+  100% { opacity: 1; transform: scale(1); }
 }

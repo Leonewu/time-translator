@@ -1,4 +1,4 @@
-import { createSettingsSaver, getProviderPreset, loadSettings, normalizeCustomKeywords, PROVIDER_PRESETS, saveSettings } from "./shared/config.js";
+import { createSettingsSaver, getProviderPreset, loadSettings, normalizeBlockedSites, normalizeCustomKeywords, PROVIDER_PRESETS, saveSettings } from "./shared/config.js";
 import { applyI18n, getMessage as t } from "./shared/i18n.js";
 import { getAnonymousInstallId, getInstallId, isVipInstallId, setInstallId } from "./shared/install-id.js";
 import { listAvailableModels } from "./shared/llm.js";
@@ -25,6 +25,7 @@ const testButton = document.querySelector("#testLlm");
 const testResult = document.querySelector("#testResult");
 const testJson = document.querySelector("#testJson");
 const installIdValue = document.querySelector("#installIdValue");
+const blockedWebsites = document.querySelector("#blockedWebsites");
 const vipBadge = document.querySelector("#vipBadge");
 const brandLogo = document.querySelector(".brand-logo");
 const systemTheme = globalThis.matchMedia?.("(prefers-color-scheme: dark)");
@@ -63,6 +64,7 @@ function readForm() {
     autoConvert: autoConvert.checked,
     theme: themeMode,
     customKeywords: normalizeCustomKeywords(customKeywords.value),
+    blockedSites: normalizeBlockedSites(blockedWebsites.value),
     targetTimeZone: document.querySelector("#targetTimeZone").value,
     defaultSourceTimeZone: document.querySelector("#defaultSourceTimeZone").value,
     providerProfiles: {
@@ -261,6 +263,7 @@ function writeForm(value) {
   autoConvert.checked = value.autoConvert !== false;
   applyTheme(value.theme);
   customKeywords.value = value.customKeywords.join("\n");
+  blockedWebsites.value = value.blockedSites.join("\n");
   document.querySelector("#targetTimeZone").value = value.targetTimeZone;
   document.querySelector("#defaultSourceTimeZone").value = value.defaultSourceTimeZone;
   provider.value = value.llm.provider;
@@ -340,8 +343,13 @@ async function loadInstallId() {
 }
 
 function updateVipBadge(value) {
-  const vip = isVipInstallId(value);
+  const normalized = String(value || "").trim();
+  const vip = isVipInstallId(normalized);
   vipBadge.hidden = !vip;
+  vipBadge.textContent = vip ? "✨" : "";
+  vipBadge.setAttribute("aria-label", vip ? t("magicCodeValid") : "");
+  vipBadge.title = vip ? t("magicCodeValid") : "";
+  vipBadge.classList.toggle("is-valid", vip);
   if (brandLogo) {
     brandLogo.src = vip ? brandLogo.dataset.vipSrc : brandLogo.dataset.defaultSrc;
     brandLogo.classList.toggle("is-vip", vip);
@@ -442,6 +450,8 @@ async function init() {
   });
   customKeywords.addEventListener("input", () => scheduleSave(0));
   customKeywords.addEventListener("blur", () => scheduleSave(0));
+  blockedWebsites.addEventListener("input", () => scheduleSave(0));
+  blockedWebsites.addEventListener("blur", () => scheduleSave(0));
   for (const field of [document.querySelector("#targetTimeZone"), document.querySelector("#defaultSourceTimeZone")]) {
     field.addEventListener("change", () => scheduleSave());
   }

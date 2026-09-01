@@ -26,6 +26,15 @@ test("内容脚本从设置读取自定义关键词并参与候选匹配", () =>
   assert.match(contentSource, /\.split\(\/\[\\n,;\]\+\//);
 });
 
+test("内容脚本支持按网页域名屏蔽自动检测", () => {
+  assert.match(contentSource, /isBlockedSite, normalizeBlockedSites/);
+  assert.match(contentSource, /let blockedSites = \[\]/);
+  assert.match(contentSource, /function isBlockedPage\(\)/);
+  assert.match(contentSource, /blockedSites = normalizeBlockedSites\(settings\.blockedSites\)/);
+  assert.match(contentSource, /!force && \(isBlockedPage\(\) \|\| !autoConvert/);
+  assert.match(contentSource, /message\.type === "SHOW_CURRENT_SELECTION" && autoConvert && !isBlockedPage\(\)/);
+});
+
 test("内容脚本自动候选包含 close of business 这类命名时间", () => {
   assert.match(contentSource, /close\\s\+of\\s\+business/);
   assert.match(contentSource, /weekdayWithTimeZone/);
@@ -86,10 +95,9 @@ test("成功和失败 Tooltip 都提供手动重新解析按钮", () => {
 });
 
 test("成功转换后的 Tooltip 提供接案順心!按钮和 Canvas 蓄力彩纸效果", () => {
-  assert.match(contentSource, /import \{ getAnonymousInstallId, getInstallId, isVipInstallId \} from "\.\/shared\/install-id\.js"/);
+  assert.match(contentSource, /import \{ getAnonymousInstallId, getInstallId \} from "\.\/shared\/install-id\.js"/);
   assert.match(contentSource, /getAnonymousInstallId\(\)/);
-  assert.match(contentSource, /vipEnabled = isVipInstallId\(installId\)/);
-  assert.match(contentSource, /const celebrateAction = vipEnabled/);
+  assert.match(contentSource, /const celebrateAction = `<button/);
   assert.match(contentSource, /data-action="celebrate"/);
   assert.match(contentSource, /<span>接案順心!<\/span>/);
   assert.match(contentSource, /<div class="card">[\s\S]*<div class="celebration-layer" aria-hidden="true"><\/div>[\s\S]*data-action="celebrate"/);
@@ -121,7 +129,7 @@ test("成功转换后的 Tooltip 提供接案順心!按钮和 Canvas 蓄力彩�
   assert.match(contentSource, /function getTooltipButton/);
   assert.doesNotMatch(contentSource, /lastCelebrateAt|celebratedAt|celebrationDebug|TT-celebrate/);
   assert.match(contentSource, /action === "celebrate"/);
-  assert.match(contentSource, /if \(!vipEnabled\) return;/);
+  assert.doesNotMatch(contentSource, /vipEnabled|isVipInstallId/);
 });
 
 test("VIP 彩蛋支持十秒十次点击，长按复用普通蓄力彩带", () => {
@@ -134,7 +142,12 @@ test("VIP 彩蛋支持十秒十次点击，长按复用普通蓄力彩带", () =
   assert.match(contentSource, /const heartShapes = new Map\(\)/);
   assert.match(contentSource, /function triggerHeartCelebration/);
   assert.match(contentSource, /getHeartShape\(heartColor\)/);
-  assert.match(contentSource, /const CLICK_EASTER_EGG_MESSAGES = \["🧩 emma~", "对不起！😣"\]/);
+  assert.match(contentSource, /const CLICK_EASTER_EGG_MESSAGES = \["🧩 \{name\}~", "对不起！😣"\]/);
+  assert.match(contentSource, /function getCelebrationName/);
+  assert.match(contentSource, /return String\(magicCode \|\| ""\)\.trim\(\)/);
+  assert.doesNotMatch(contentSource, /DEFAULT_CELEBRATION_NAME/);
+  assert.match(contentSource, /function formatCelebrationMessage/);
+  assert.match(contentSource, /replaceAll\("\{name\}", getCelebrationName\(\)\)/);
   assert.match(contentSource, /let clickEasterEggMessageIndex = 0/);
   assert.match(contentSource, /message\.textContent = text/);
   assert.match(contentSource, /function consumeClickEasterEggMessage/);
@@ -160,7 +173,7 @@ test("VIP 彩蛋支持十秒十次点击，长按复用普通蓄力彩带", () =
   assert.match(contentSource, /celebration-message/);
 });
 
-test("长按超过 1 秒先倾斜颤抖，松手后恢复普通蓄力彩带并显示紫色 emma", () => {
+test("长按超过 1 秒先倾斜颤抖，松手后恢复普通蓄力彩带并显示接案顺心文案", () => {
   assert.match(contentSource, /const CELEBRATION_SHAKE_THRESHOLD_MS = 1_000/);
   assert.match(contentSource, /shakeTimer = setTimeout\(\(\) => \{/);
   assert.match(contentSource, /celebrateButton\.classList\.add\("is-charging"\)/);
@@ -170,7 +183,7 @@ test("长按超过 1 秒先倾斜颤抖，松手后恢复普通蓄力彩带并�
   assert.match(contentSource, /@keyframes celebrate-charge-wiggle/);
   assert.match(contentSource, /const holdDuration = pendingHoldDuration \|\| 0/);
   assert.match(contentSource, /const isLongPress = holdDuration >= CELEBRATION_SHAKE_THRESHOLD_MS/);
-  assert.match(contentSource, /if \(isLongPress\) \{[\s\S]*triggerCelebration\(celebrateButton, holdDuration\);[\s\S]*showEasterEggMessage\(celebrateButton, \{ color: "#7c5cfc", shadowColor: "rgba\(124, 92, 252, \.36\)", text: "🧩 emma~" \}\);[\s\S]*return;/);
+  assert.match(contentSource, /if \(isLongPress\) \{[\s\S]*triggerCelebration\(celebrateButton, holdDuration\);[\s\S]*showEasterEggMessage\(celebrateButton, \{ color: "#7c5cfc", shadowColor: "rgba\(124, 92, 252, \.36\)", text: `🧩 \$\{getCelebrationName\(\)\}~ 接案順心！` \}\);[\s\S]*return;/);
   assert.match(contentSource, /if \(!isClickEasterEgg\) triggerCelebration\(celebrateButton, holdDuration\)/);
   assert.doesNotMatch(contentSource, /LONG_HOLD_HEART_COLORS|fallingMessage|getFallingMessageShape|isLongPressEasterEgg|pendingLongPress|longPressReady/);
   const startShakeTimerBlock = contentSource.match(/const startShakeTimer = \(\) => \{[\s\S]*?\n    \};/)?.[0] || "";

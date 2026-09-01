@@ -1,5 +1,6 @@
 import confetti from "canvas-confetti";
-import { getAnonymousInstallId, getInstallId, isVipInstallId } from "./shared/install-id.js";
+import { isBlockedSite, normalizeBlockedSites } from "./shared/config.js";
+import { getAnonymousInstallId, getInstallId } from "./shared/install-id.js";
 
 let tooltipHost = null;
 let requestSequence = 0;
@@ -10,6 +11,7 @@ let detailsOpen = false;
 let dismissedSelection = null;
 let autoConvert = true;
 let customTimeKeywords = [];
+let blockedSites = [];
 let selectionTimer = null;
 let currentReferenceContext = null;
 let reportCaseKey = "";
@@ -17,14 +19,13 @@ let reportState = "idle";
 let reportError = "";
 let pointerGesture = null;
 let pendingSelectionSnapshot = null;
-let vipEnabled = false;
 let anonymousInstallId = "";
 let magicCode = "";
 
 const POINTER_MOVE_THRESHOLD = 4;
 const CELEBRATION_COLORS = ["#7c5cfc", "#a97cff", "#d48bff", "#4d427f", "#ffbd32"];
 const HEART_CELEBRATION_COLORS = ["#ef5b8b", "#ff79a8", "#d48bff", "#a97cff", "#ffbd32"];
-const CLICK_EASTER_EGG_MESSAGES = ["🧩 emma~", "对不起！😣"];
+const CLICK_EASTER_EGG_MESSAGES = ["🧩 {name}~", "对不起！😣"];
 const CELEBRATION_CLICK_LIMIT = 10;
 const CELEBRATION_CLICK_WINDOW_MS = 10_000;
 const CELEBRATION_COMBO_IDLE_MS = 3_000;
@@ -61,18 +62,21 @@ function matchesCustomKeyword(value) {
   return customTimeKeywords.some((keyword) => lowerValue.includes(keyword));
 }
 
+function isBlockedPage() {
+  return isBlockedSite(location.hostname, blockedSites);
+}
+
 chrome.storage.local.get("settings", (result) => {
   const settings = result.settings || {};
   autoConvert = settings.autoConvert !== false && settings.enabled !== false;
   customTimeKeywords = normalizeCustomKeywords(settings.customKeywords);
+  blockedSites = normalizeBlockedSites(settings.blockedSites);
 });
 
 void getInstallId().then((installId) => {
   magicCode = installId;
-  vipEnabled = isVipInstallId(installId);
 }).catch(() => {
   magicCode = "";
-  vipEnabled = false;
 });
 
 void getAnonymousInstallId().then((installId) => {
@@ -84,7 +88,6 @@ void getAnonymousInstallId().then((installId) => {
 chrome.storage.onChanged.addListener((changes, areaName) => {
   if (areaName === "local" && changes.installId) {
     magicCode = String(changes.installId.newValue || "").trim();
-    vipEnabled = isVipInstallId(magicCode);
     requestSequence += 1;
     hideTooltip();
   }
@@ -92,6 +95,11 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
     const settings = changes.settings.newValue || {};
     autoConvert = settings.autoConvert !== false && settings.enabled !== false;
     customTimeKeywords = normalizeCustomKeywords(settings.customKeywords);
+    blockedSites = normalizeBlockedSites(settings.blockedSites);
+    if (isBlockedPage()) {
+      requestSequence += 1;
+      hideTooltip();
+    }
     if (!autoConvert) {
       requestSequence += 1;
       hideTooltip();
@@ -207,6 +215,7 @@ function scheduleSelectionParse() {
     pendingSelectionSnapshot = null;
     const info = getSelectionInfo();
     if (!info) return;
+    if (isBlockedPage()) return;
     if (info.isEditable) return;
     if (expectedSelection && !isSameSelection(info.selection, expectedSelection)) return;
     if (!isTimeCandidate(info.text) || (currentText === info.text && tooltipHost?.style.display !== "none")) return;
@@ -480,7 +489,15 @@ function getCelebrationOrigin(button) {
   };
 }
 
-function showEasterEggMessage(button, { color = "#ef5b8b", shadowColor = "rgba(239, 91, 139, .24)", text = "♥ emma~" } = {}) {
+function getCelebrationName() {
+  return String(magicCode || "").trim();
+}
+
+function formatCelebrationMessage(message) {
+  return String(message || "").replaceAll("{name}", getCelebrationName());
+}
+
+function showEasterEggMessage(button, { color = "#ef5b8b", shadowColor = "rgba(239, 91, 139, .24)", text = `♥ ${getCelebrationName()}~` } = {}) {
   const card = button.closest(".card") || button.getRootNode?.().querySelector?.(".card");
   const layer = card?.querySelector(".celebration-layer");
   if (!card || !layer) return;
@@ -507,7 +524,7 @@ function activateComboTransparency(button) {
   comboTransparencyTimers.set(card, timer);
 }
 
-function triggerHeartCelebration(button, { colors = HEART_CELEBRATION_COLORS, heartColor = "#ef5b8b", messageText = "♥ emma~" } = {}) {
+function triggerHeartCelebration(button, { colors = HEART_CELEBRATION_COLORS, heartColor = "#ef5b8b", messageText = `♥ ${getCelebrationName()}~` } = {}) {
   const origin = getCelebrationOrigin(button);
   const shoot = getConfettiInstance();
   const heart = getHeartShape(heartColor);
@@ -531,7 +548,7 @@ function triggerHeartCelebration(button, { colors = HEART_CELEBRATION_COLORS, he
 }
 
 function consumeClickEasterEggMessage() {
-  const message = CLICK_EASTER_EGG_MESSAGES[clickEasterEggMessageIndex];
+  const message = formatCelebrationMessage(CLICK_EASTER_EGG_MESSAGES[clickEasterEggMessageIndex]);
   clickEasterEggMessageIndex = (clickEasterEggMessageIndex + 1) % CLICK_EASTER_EGG_MESSAGES.length;
   return message;
 }
@@ -641,9 +658,7 @@ function renderResult(result, text, rect) {
 
   const sourceZone = formatSourceZone(result);
   const targetZone = formatTargetZone(result);
-  const celebrateAction = vipEnabled
-    ? `<button type="button" class="celebrate" aria-label="接案順心!" title="接案順心!" data-action="celebrate">${icon("spark")}<span>接案順心!</span></button>`
-    : "";
+  const celebrateAction = `<button type="button" class="celebrate" aria-label="接案順心!" title="接案順心!" data-action="celebrate">${icon("spark")}<span>接案順心!</span></button>`;
   const source = escapeHtml(sourceZone);
   const relationLabels = { before: "不晚于", by: "截止", after: "之后", at: "时间点", between: "时间范围", from: "时间范围" };
   const assumptions = (result.assumptions || []).map((item) => `<div>· ${escapeHtml(item)}</div>`).join("");
@@ -746,7 +761,7 @@ function renderResult(result, text, rect) {
       const isLongPress = holdDuration >= CELEBRATION_SHAKE_THRESHOLD_MS;
       if (isLongPress) {
         triggerCelebration(celebrateButton, holdDuration);
-        showEasterEggMessage(celebrateButton, { color: "#7c5cfc", shadowColor: "rgba(124, 92, 252, .36)", text: "🧩 emma~" });
+        showEasterEggMessage(celebrateButton, { color: "#7c5cfc", shadowColor: "rgba(124, 92, 252, .36)", text: `🧩 ${getCelebrationName()}~ 接案順心！` });
         return;
       }
       const isClickEasterEgg = recordCelebrationClick(celebrateButton);
@@ -772,7 +787,7 @@ function formatTargetZone(result) {
 }
 
 function renderAndParse(info, force = false) {
-  if (!info || (!force && (!autoConvert || info.isEditable || !isTimeCandidate(info.text)))) return;
+  if (!info || (!force && (isBlockedPage() || !autoConvert || info.isEditable || !isTimeCandidate(info.text)))) return;
   if (dismissedSelection && info.text === dismissedSelection.text && Date.now() - dismissedSelection.at < 1200) return;
   if (!dismissedSelection || info.text !== dismissedSelection.text || force) dismissedSelection = null;
   if (!isExtensionContextValid()) {
@@ -839,7 +854,6 @@ function handleTooltipClick(event) {
     const retryRect = currentAnchorRect;
     if (retryText) renderAndParse({ text: retryText, rect: retryRect, referenceContext: currentReferenceContext }, true);
   } else if (action === "celebrate") {
-    if (!vipEnabled) return;
     triggerCelebration(button);
   } else if (action === "report") {
     if (!currentText || reportState === "sending" || reportState === "sent") return;
@@ -907,5 +921,5 @@ chrome.runtime.onMessage.addListener((message) => {
     const info = getSelectionInfo() || { text: message.text, rect: { left: window.innerWidth / 2 - 120, bottom: 60 } };
     renderAndParse({ ...info, text: message.text || info.text }, true);
   }
-  if (message.type === "SHOW_CURRENT_SELECTION" && autoConvert) renderAndParse(getSelectionInfo(), true);
+  if (message.type === "SHOW_CURRENT_SELECTION" && autoConvert && !isBlockedPage()) renderAndParse(getSelectionInfo(), true);
 });

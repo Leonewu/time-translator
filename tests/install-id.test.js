@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { getAnonymousInstallId, getInstallId, isVipInstallId, setInstallId } from "../src/shared/install-id.js";
 
-test("临时版本默认使用 emma，用户清空后仍可关闭 VIP", async () => {
+test("Magic Code 默认留空，用户填写 emma 后可启用 VIP", async () => {
   const values = {};
   let writes = 0;
   const storage = {
@@ -18,7 +18,7 @@ test("临时版本默认使用 emma，用户清空后仍可关闭 VIP", async ()
   const first = await getInstallId(storage);
   const second = await getInstallId(storage);
 
-  assert.equal(first, "emma");
+  assert.equal(first, "");
   assert.equal(second, first);
   assert.equal(values.installId, undefined);
   assert.equal(writes, 0);

@@ -133,10 +133,10 @@ test("Popup 提供自定义关键词输入框", () => {
 test("Popup 提供反馈邮件入口和当前版本号", () => {
   assert.match(popupHtml, /mailto:reon\.hypr@gmail\.com\?subject=Time%20Translator%20Feedback/);
   assert.match(popupHtml, /data-i18n="feedback"/);
-  assert.match(popupHtml, /<footer>\s*<span>v0\.1\.14<\/span>\s*<a class="feedback-link"/);
-  assert.match(popupHtml, />v0\.1\.14<\/span>/);
+  assert.match(popupHtml, /<footer>\s*<span>v0\.1\.15<\/span>\s*<a class="feedback-link"/);
+  assert.match(popupHtml, />v0\.1\.15<\/span>/);
   assert.match(popupCss, /\.feedback-link \{[^}]*margin-left:\s*auto/);
-  assert.match(manifest, /"version": "0\.1\.14"/);
+  assert.match(manifest, /"version": "0\.1\.15"/);
 });
 
 test("Popup 不显示自动保存提示和 API Key 浏览器存储提示", () => {
@@ -150,13 +150,14 @@ test("Popup 显示可编辑 Magic Code 和 VIP 标识，但不提供复制按钮
   assert.match(popupHtml, /data-i18n="magicCodeLabel">Magic Code<\/span>/);
   assert.match(i18nSource, /magicCodeLabel: "Magic Code"/);
   assert.match(i18nSource, /magicCodeLabel: "魔法代码"/);
-  assert.match(i18nSource, /magicCodePlaceholder: "Enter Magic Code"/);
-  assert.match(i18nSource, /magicCodePlaceholder: "输入魔法代码"/);
+  assert.match(i18nSource, /magicCodePlaceholder: "Your name"/);
+  assert.match(i18nSource, /magicCodePlaceholder: "你的名字"/);
+  assert.match(i18nSource, /magicCodeValid: "VIP code recognized"/);
+  assert.match(i18nSource, /magicCodeValid: "已识别 VIP 代码"/);
+  assert.doesNotMatch(i18nSource, /magicCodeNotRecognized|不是 VIP 代码/);
   assert.match(popupHtml, /id="installIdValue"[^>]+type="text"/);
   assert.match(popupHtml, /id="vipBadge"/);
-  assert.match(popupHtml, /aria-label="emma"/);
-  assert.match(popupHtml, /class="vip-badge-star"[^>]*><svg/);
-  assert.match(i18nSource, /vipBadge: "emma"/);
+  assert.match(popupHtml, /id="vipBadge"[^>]*aria-label="VIP"[^>]*>✨<\/span>/);
   assert.doesNotMatch(popupHtml, /id="copyInstallId"/);
   assert.match(popupJs, /getAnonymousInstallId/);
   assert.match(popupJs, /getInstallId/);
@@ -168,19 +169,26 @@ test("Popup 显示可编辑 Magic Code 和 VIP 标识，但不提供复制按钮
   assert.match(popupJs, /if \(!value\) \{[\s\S]*await setInstallId\(""\)/);
   assert.match(popupCss, /\.install-id-row/);
   assert.match(popupCss, /\.vip-badge/);
-  assert.match(popupCss, /font-family: "Baloo 2"/);
-  assert.match(popupCss, /font-weight: 500/);
   assert.match(popupCss, /\.install-id-label \{[^}]*font-family: "Baloo 2"/);
   assert.match(popupCss, /\.install-id-value \{[^}]*font-family: "Baloo 2"/);
-  assert.match(popupCss, /\.vip-badge-star \{[^}]*align-items: center[^}]*display: inline-flex/);
-  assert.match(popupCss, /\.vip-badge-star svg \{[^}]*display: block/);
+  assert.match(popupCss, /\.vip-badge \{[^}]*font-size: 12px[^}]*line-height: 1/);
   assert.match(popupCss, /\.vip-badge\[hidden\] \{[^}]*display:\s*none/);
-  assert.match(popupCss, /--vip-fill:\s*#eee9ff/);
-  assert.match(popupCss, /--vip-star:\s*#6d51e8/);
-  assert.match(popupCss, /--vip-fill:\s*rgba\(169, 124, 255/);
-  assert.match(popupCss, /animation: vip-breathe 2\.8s ease-in-out infinite/);
-  assert.match(popupCss, /@keyframes vip-breathe/);
-  assert.match(popupCss, /prefers-reduced-motion: reduce/);
+  assert.match(popupJs, /vipBadge\.textContent = vip \? "✨" : ""/);
+  assert.match(popupJs, /vipBadge\.hidden = !vip/);
+  assert.doesNotMatch(popupJs, /😣|is-invalid|magicCodeNotRecognized/);
+  assert.match(popupCss, /@keyframes vip-code-pop/);
+  assert.doesNotMatch(popupCss, /vip-code-shake|vip-breathe|vip-badge-star|--vip-fill|--vip-star/);
+});
+
+test("Popup 提供独立的屏蔽网页配置", () => {
+  assert.match(popupHtml, /<details class="section-block optional-block">/);
+  assert.match(popupHtml, /id="blockedWebsites"/);
+  assert.match(i18nSource, /blockedWebsites: "Blocked websites"/);
+  assert.match(i18nSource, /blockedWebsites: "屏蔽网页"/);
+  assert.match(popupJs, /normalizeBlockedSites/);
+  assert.match(popupJs, /blockedSites: normalizeBlockedSites\(blockedWebsites\.value\)/);
+  assert.match(popupCss, /\.optional-block/);
+  assert.match(popupCss, /\.optional-heading::after/);
 });
 
 test("Popup 不承载搞定晒按钮和彩纸效果", () => {

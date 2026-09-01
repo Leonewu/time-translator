@@ -105,19 +105,26 @@
           </label>
         </section>
 
+        <details class="section-block optional-block">
+          <summary class="section-heading optional-heading"><span>03</span><strong data-i18n="blockedWebsites">Blocked websites</strong></summary>
+          <label><span class="field-label" data-i18n="blockedWebsites">Blocked websites</span>
+            <textarea id="blockedWebsites" rows="3" data-i18n-placeholder="blockedWebsitesPlaceholder" placeholder="e.g. notion.so&#10;example.com"></textarea>
+            <span class="field-note" data-i18n="blockedWebsitesNote">Optional · disables automatic detection; right-click detection remains available.</span>
+          </label>
+        </details>
+
         <div class="form-actions" hidden>
           <span id="saveStatus" class="save-status" role="status" aria-live="polite"></span>
         </div>
       </div>
 
       <footer>
-        <span>v0.1.14</span>
+        <span>v0.1.15</span>
         <a class="feedback-link" href="mailto:reon.hypr@gmail.com?subject=Time%20Translator%20Feedback" data-i18n="feedback" data-i18n-aria-label="feedbackAria" aria-label="Send feedback email">Feedback</a>
       </footer>
       <div class="install-id-row">
-        <span class="install-id-label" data-i18n="magicCodeLabel">Magic Code</span>
-        <input id="installIdValue" class="install-id-value" type="text" autocomplete="off" spellcheck="false" data-i18n-placeholder="magicCodePlaceholder" placeholder="Enter Magic Code" data-i18n-aria-label="magicCodeLabel" aria-label="Magic Code" />
-        <span id="vipBadge" class="vip-badge" aria-label="emma" hidden><span class="vip-badge-star" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="m8 1.5 1 4.1 3.5 1.4L9 8.4 8 12.5 7 8.4 3.5 7 7 5.6 8 1.5Z" fill="currentColor"/></svg></span><span data-i18n="vipBadge">emma</span></span>
+        <span class="install-id-label" data-i18n="magicCodeLabel">Magic Code</span><span id="vipBadge" class="vip-badge" aria-label="VIP" hidden>✨</span>
+        <input id="installIdValue" class="install-id-value" type="text" autocomplete="off" spellcheck="false" data-i18n-placeholder="magicCodePlaceholder" placeholder="Your name" data-i18n-aria-label="magicCodeLabel" aria-label="Magic Code" />
       </div>
     </main>
     <script type="module" src="./popup.js"></script>

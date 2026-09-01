@@ -3,7 +3,6 @@ const ANONYMOUS_INSTALL_ID_KEY = "anonymousInstallId";
 const ANONYMOUS_INSTALL_ID_GLOBAL = "__TIME_TRANSLATOR_ANONYMOUS_INSTALL_ID__";
 const MAX_INSTALL_ID_LENGTH = 80;
 const VIP_INSTALL_ID = "emma";
-const DEFAULT_MAGIC_CODE = VIP_INSTALL_ID;
 const LEGACY_GENERATED_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 let installIdPromise = null;
@@ -73,7 +72,7 @@ export function getInstallId(storage = getDefaultStorage()) {
         await storage.set({ [INSTALL_ID_KEY]: "" });
         return "";
       }
-      return hasStoredValue ? code : DEFAULT_MAGIC_CODE;
+      return hasStoredValue ? code : "";
     })().catch((error) => {
       installIdPromise = null;
       throw error;

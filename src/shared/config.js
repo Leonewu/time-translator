@@ -2,6 +2,7 @@ export const DEFAULT_SETTINGS = {
   autoConvert: true,
   theme: "system",
   customKeywords: [],
+  blockedSites: [],
   providerProfiles: {},
   targetTimeZone: "Asia/Shanghai",
   defaultSourceTimeZone: "Europe/London",
@@ -26,6 +27,34 @@ export function normalizeCustomKeywords(value) {
     if (normalized.length >= 30) break;
   }
   return normalized;
+}
+
+export function normalizeBlockedSites(value) {
+  const list = (Array.isArray(value) ? value : [value]).flatMap((item) => String(item ?? "").split(/[\n,;]+/));
+  const seen = new Set();
+  const normalized = [];
+  for (const item of list) {
+    let hostname = String(item ?? "").trim().toLocaleLowerCase();
+    if (!hostname || hostname.length > 160) continue;
+    hostname = hostname.replace(/^\*\./, "");
+    try {
+      hostname = new URL(hostname.includes("://") ? hostname : `https://${hostname}`).hostname.toLocaleLowerCase();
+    } catch {
+      continue;
+    }
+    hostname = hostname.replace(/\.$/, "");
+    if (!hostname || !/^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/.test(hostname) || seen.has(hostname)) continue;
+    seen.add(hostname);
+    normalized.push(hostname);
+    if (normalized.length >= 30) break;
+  }
+  return normalized;
+}
+
+export function isBlockedSite(hostname, blockedSites = []) {
+  const normalizedHostname = String(hostname || "").trim().toLocaleLowerCase().replace(/\.$/, "");
+  if (!normalizedHostname) return false;
+  return normalizeBlockedSites(blockedSites).some((site) => normalizedHostname === site || normalizedHostname.endsWith(`.${site}`));
 }
 
 function normalizeProviderProfile(provider, value = {}) {
@@ -123,6 +152,7 @@ function mergeSettings(saved = {}) {
     autoConvert: saved.autoConvert ?? legacyAutoConvert ?? DEFAULT_SETTINGS.autoConvert,
     theme: ["light", "dark", "system"].includes(saved.theme) ? saved.theme : DEFAULT_SETTINGS.theme,
     customKeywords: normalizeCustomKeywords(saved.customKeywords),
+    blockedSites: normalizeBlockedSites(saved.blockedSites),
     providerProfiles,
     llm: {
       ...DEFAULT_SETTINGS.llm,
