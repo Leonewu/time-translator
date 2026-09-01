@@ -4,6 +4,11 @@
 >
 > 把一句英文里的当地时间，换算成一眼能懂的北京时间。
 
+## License
+
+Time Translator is released under the [MIT License](./LICENSE). Third-party
+licenses and notices are listed in [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md).
+
 Time Translator 是一个 Chrome / Edge Manifest V3 浏览器插件。选中网页中的时间表达，插件负责理解原文、识别时区，再把结果转换成普通人容易读懂的日期和时间。
 
 ## 产品功能
