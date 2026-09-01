@@ -94,6 +94,12 @@ test("成功和失败 Tooltip 都提供手动重新解析按钮", () => {
   assert.match(contentSource, /renderAndParse\(\{ text: retryText, rect: retryRect, referenceContext: currentReferenceContext \}, true\)/);
 });
 
+test("失败 Tooltip 也提供接案順心!按钮和彩纸层", () => {
+  assert.match(contentSource, /if \(!result\?\.ok\) \{[\s\S]*<div class="celebration-layer" aria-hidden="true"><\/div>[\s\S]*\$\{celebrateAction\}[\s\S]*data-action="refresh"/);
+  assert.match(contentSource, /if \(!result\?\.ok\) \{[\s\S]*placeHost\(rect\);[\s\S]*bindCelebrationButton\(host\);[\s\S]*return;/);
+  assert.match(contentSource, /function bindCelebrationButton/);
+});
+
 test("成功转换后的 Tooltip 提供接案順心!按钮和 Canvas 蓄力彩纸效果", () => {
   assert.match(contentSource, /import \{ getAnonymousInstallId, getInstallId \} from "\.\/shared\/install-id\.js"/);
   assert.match(contentSource, /getAnonymousInstallId\(\)/);

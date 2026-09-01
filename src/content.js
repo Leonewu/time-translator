@@ -676,9 +676,11 @@ function renderResult(result, text, rect) {
     const buttonClass = `report${reported ? " reported" : failed ? " failed" : ""}`;
     return `<button class="${buttonClass}" aria-label="${label}" title="${label}" data-action="report"${sending ? " disabled aria-busy=\"true\"" : ""}>${icon(reported ? "check" : "report")}</button>`;
   };
+  const celebrateAction = `<button type="button" class="celebrate" aria-label="接案順心!" title="接案順心!" data-action="celebrate">${icon("spark")}<span>接案順心!</span></button>`;
   if (!result?.ok) {
     host.shadowRoot.innerHTML = `<style>${tooltipStyles()}</style>
       <div class="card">
+        <div class="celebration-layer" aria-hidden="true"></div>
         <div class="flow">
           <div class="side"><div class="source" title="${escapeHtml(text)}">${escapeHtml(text)}</div></div>
           <div class="arrow">→</div>
@@ -686,18 +688,19 @@ function renderResult(result, text, rect) {
         </div>
         <div class="error">${escapeHtml(result?.reason || result?.error || "请补充日期、时间或时区")}</div>
         <div class="error-actions">
+          ${celebrateAction}
           <button class="refresh" aria-label="重新解析" title="重新解析" data-action="refresh">${icon("refresh")}</button>
           ${reportButton()}
           <button class="close" aria-label="关闭" title="关闭" data-action="close">${icon("close")}</button>
         </div>
       </div>`;
     placeHost(rect);
+    bindCelebrationButton(host);
     return;
   }
 
   const sourceZone = formatSourceZone(result);
   const targetZone = formatTargetZone(result);
-  const celebrateAction = `<button type="button" class="celebrate" aria-label="接案順心!" title="接案順心!" data-action="celebrate">${icon("spark")}<span>接案順心!</span></button>`;
   const source = escapeHtml(sourceZone);
   const relationLabels = { before: "不晚于", by: "截止", after: "之后", at: "时间点", between: "时间范围", from: "时间范围" };
   const assumptions = (result.assumptions || []).map((item) => `<div>· ${escapeHtml(item)}</div>`).join("");
@@ -738,77 +741,80 @@ function renderResult(result, text, rect) {
       </div>
       ${details}
     </div>`;
-  const celebrateButton = host.shadowRoot.querySelector('[data-action="celebrate"]');
-  if (celebrateButton) {
-    let pressStartedAt = 0;
-    let pressPointerId = null;
-    let pendingHoldDuration = null;
-    let shakeTimer = null;
-    const clearShakeTimer = () => {
-      if (shakeTimer) clearTimeout(shakeTimer);
-      shakeTimer = null;
-    };
-    const startShakeTimer = () => {
-      clearShakeTimer();
-      shakeTimer = setTimeout(() => {
-        if (!pressStartedAt) return;
-        celebrateButton.classList.add("is-charging");
-        celebrateButton.classList.add("is-charging-shake");
-      }, CELEBRATION_SHAKE_THRESHOLD_MS);
-    };
-    const finishPress = (event) => {
-      if (!pressStartedAt || (pressPointerId !== null && event.pointerId !== pressPointerId)) return;
-      pendingHoldDuration = Date.now() - pressStartedAt;
-      clearShakeTimer();
-      pressStartedAt = 0;
-      pressPointerId = null;
-      celebrateButton.classList.remove("is-charging");
-      celebrateButton.classList.remove("is-charging-shake");
-      try {
-        celebrateButton.releasePointerCapture?.(event.pointerId);
-      } catch {
-        // The pointer may already have been released by the browser.
-      }
-    };
-    celebrateButton.addEventListener("pointerdown", (event) => {
-      if (event.pointerType === "mouse" && event.button !== 0) return;
-      pressStartedAt = Date.now();
-      pressPointerId = event.pointerId;
-      pendingHoldDuration = null;
-      startShakeTimer();
-      try {
-        celebrateButton.setPointerCapture?.(event.pointerId);
-      } catch {
-        // Pointer capture is optional; the click event remains the fallback.
-      }
-    });
-    celebrateButton.addEventListener("pointerup", finishPress);
-    celebrateButton.addEventListener("pointercancel", (event) => {
-      if (pressPointerId !== null && event.pointerId !== pressPointerId) return;
-      pressStartedAt = 0;
-      pressPointerId = null;
-      pendingHoldDuration = null;
-      clearShakeTimer();
-      celebrateButton.classList.remove("is-charging");
-      celebrateButton.classList.remove("is-charging-shake");
-    });
-    const celebrate = (event) => {
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      const holdDuration = pendingHoldDuration || 0;
-      pendingHoldDuration = null;
-      const isLongPress = holdDuration >= CELEBRATION_SHAKE_THRESHOLD_MS;
-      if (isLongPress) {
-        triggerCelebration(celebrateButton, holdDuration);
-        showEasterEggMessage(celebrateButton, { color: "#7c5cfc", shadowColor: "rgba(124, 92, 252, .36)", text: `🧩 ${getCelebrationName()}~ 接案順心！` });
-        return;
-      }
-      const isClickEasterEgg = recordCelebrationClick(celebrateButton);
-      if (!isClickEasterEgg) triggerCelebration(celebrateButton, holdDuration);
-    };
-    celebrateButton.addEventListener("click", celebrate);
-  }
+  bindCelebrationButton(host);
   placeHost(rect);
+}
+
+function bindCelebrationButton(host) {
+  const celebrateButton = host.shadowRoot.querySelector('[data-action="celebrate"]');
+  if (!celebrateButton) return;
+  let pressStartedAt = 0;
+  let pressPointerId = null;
+  let pendingHoldDuration = null;
+  let shakeTimer = null;
+  const clearShakeTimer = () => {
+    if (shakeTimer) clearTimeout(shakeTimer);
+    shakeTimer = null;
+  };
+  const startShakeTimer = () => {
+    clearShakeTimer();
+    shakeTimer = setTimeout(() => {
+      if (!pressStartedAt) return;
+      celebrateButton.classList.add("is-charging");
+      celebrateButton.classList.add("is-charging-shake");
+    }, CELEBRATION_SHAKE_THRESHOLD_MS);
+  };
+  const finishPress = (event) => {
+    if (!pressStartedAt || (pressPointerId !== null && event.pointerId !== pressPointerId)) return;
+    pendingHoldDuration = Date.now() - pressStartedAt;
+    clearShakeTimer();
+    pressStartedAt = 0;
+    pressPointerId = null;
+    celebrateButton.classList.remove("is-charging");
+    celebrateButton.classList.remove("is-charging-shake");
+    try {
+      celebrateButton.releasePointerCapture?.(event.pointerId);
+    } catch {
+      // The pointer may already have been released by the browser.
+    }
+  };
+  celebrateButton.addEventListener("pointerdown", (event) => {
+    if (event.pointerType === "mouse" && event.button !== 0) return;
+    pressStartedAt = Date.now();
+    pressPointerId = event.pointerId;
+    pendingHoldDuration = null;
+    startShakeTimer();
+    try {
+      celebrateButton.setPointerCapture?.(event.pointerId);
+    } catch {
+      // Pointer capture is optional; the click event remains the fallback.
+    }
+  });
+  celebrateButton.addEventListener("pointerup", finishPress);
+  celebrateButton.addEventListener("pointercancel", (event) => {
+    if (pressPointerId !== null && event.pointerId !== pressPointerId) return;
+    pressStartedAt = 0;
+    pressPointerId = null;
+    pendingHoldDuration = null;
+    clearShakeTimer();
+    celebrateButton.classList.remove("is-charging");
+    celebrateButton.classList.remove("is-charging-shake");
+  });
+  const celebrate = (event) => {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    const holdDuration = pendingHoldDuration || 0;
+    pendingHoldDuration = null;
+    const isLongPress = holdDuration >= CELEBRATION_SHAKE_THRESHOLD_MS;
+    if (isLongPress) {
+      triggerCelebration(celebrateButton, holdDuration);
+      showEasterEggMessage(celebrateButton, { color: "#7c5cfc", shadowColor: "rgba(124, 92, 252, .36)", text: `🧩 ${getCelebrationName()}~ 接案順心！` });
+      return;
+    }
+    const isClickEasterEgg = recordCelebrationClick(celebrateButton);
+    if (!isClickEasterEgg) triggerCelebration(celebrateButton, holdDuration);
+  };
+  celebrateButton.addEventListener("click", celebrate);
 }
 
 function formatSourceZone(result) {
