@@ -1,8 +1,14 @@
 # Time Translator
 
+<p align="center">
+  <img src="./src/assets/icon-128.png" width="128" alt="Time Translator logo">
+</p>
+
 > 元气100%的时区转换工具
 >
 > 把一句英文里的当地时间，换算成一眼能懂的北京时间。
+
+[Install from the Chrome Web Store](https://chromewebstore.google.com/detail/time-translator/iifmlolneppjniafidlbdffpmjbnlgoe)
 
 ## License
 
