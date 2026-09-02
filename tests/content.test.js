@@ -156,7 +156,8 @@ test("VIP 彩蛋支持十秒十次点击，长按复用普通蓄力彩带", () =
   assert.doesNotMatch(contentSource, /♥|getHeartShape|heartShapes|shapeFromText|triggerHeartCelebration|HEART_CELEBRATION_COLORS|COMBO_CELEBRATION_COLORS/);
   assert.match(contentSource, /color = "#ef5b8b"/);
   assert.doesNotMatch(contentSource, /#ff79a8|celebration-heart-pop/);
-  assert.match(contentSource, /const CLICK_EASTER_EGG_MESSAGES = \[[\s\S]*"🧩 \{name\}~"[\s\S]*"真的很抱歉\.\.\."[\s\S]*"希望看到这里的时候，你今天心情不错。🎉"[\s\S]*"希望你正在过一个普通但舒服的下午。"[\s\S]*"希望你今天能看到好看的夕阳🌇和月亮🌙"[\s\S]*"随时 feedback 我，if needs"[\s\S]*\]/);
+  assert.match(contentSource, /const CLICK_EASTER_EGG_MESSAGES = \[[\s\S]*"🧩 \{name\}~"[\s\S]*"希望看到这里的时候，你今天心情不错。🎉"[\s\S]*"希望你正在过一个普通但舒服的下午。"[\s\S]*"希望你今天能看到好看的夕阳🌇和月亮🌙"[\s\S]*"随时 feedback 我，if needs"[\s\S]*\]/);
+  assert.doesNotMatch(contentSource, /真的很抱歉/);
   assert.match(contentSource, /function getCelebrationName/);
   assert.match(contentSource, /return String\(magicCode \|\| ""\)\.trim\(\)/);
   assert.doesNotMatch(contentSource, /DEFAULT_CELEBRATION_NAME/);

@@ -40,7 +40,6 @@ const COMBO_CELEBRATION_THEMES = [
 ];
 const CLICK_EASTER_EGG_MESSAGES = [
   "🧩 {name}~",
-  "真的很抱歉...",
   "希望看到这里的时候，你今天心情不错。🎉",
   "希望你正在过一个普通但舒服的下午。",
   "希望你今天能看到好看的夕阳🌇和月亮🌙",
