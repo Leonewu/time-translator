@@ -133,10 +133,10 @@ test("Popup 提供自定义关键词输入框", () => {
 test("Popup 提供反馈邮件入口和当前版本号", () => {
   assert.match(popupHtml, /mailto:reon\.hypr@gmail\.com\?subject=Time%20Translator%20Feedback/);
   assert.match(popupHtml, /data-i18n="feedback"/);
-  assert.match(popupHtml, /<footer>\s*<span>v0\.1\.16<\/span>\s*<a class="feedback-link"/);
-  assert.match(popupHtml, />v0\.1\.16<\/span>/);
+  assert.match(popupHtml, /<footer>\s*<span>v0\.1\.17<\/span>\s*<a class="feedback-link"/);
+  assert.match(popupHtml, />v0\.1\.17<\/span>/);
   assert.match(popupCss, /\.feedback-link \{[^}]*margin-left:\s*auto/);
-  assert.match(manifest, /"version": "0\.1\.16"/);
+  assert.match(manifest, /"version": "0\.1\.17"/);
 });
 
 test("Popup 不显示自动保存提示和 API Key 浏览器存储提示", () => {
@@ -211,12 +211,12 @@ test("Popup 和扩展 manifest 使用时区小云朵 logo", () => {
   assert.match(popupCss, /popup-shell::after[\s\S]*url\("\.\/assets\/time-cloud\.png"\)/);
 });
 
-test("产品名称统一为 Time Translator", () => {
+test("产品名称统一为 Time Translator，商店名称补充功能关键词", () => {
   assert.match(popupHtml, /<title data-i18n="popupTitle">Time Translator<\/title>/);
   assert.match(popupHtml, /TIME TRANSLATOR/);
   assert.match(popupHtml, /<h1 class="brand-title">Time Translator<\/h1>/);
   assert.doesNotMatch(popupHtml, /class="energy-mark"/);
-  assert.match(manifest, /"name": "Time Translator"/);
+  assert.match(manifest, /"name": "Time Translator – Time Zone Converter"/);
 });
 
 test("在线测试嵌入模型连接区", () => {

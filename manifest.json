@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "Time Translator",
-  "version": "0.1.16",
+  "name": "Time Translator – Time Zone Converter",
+  "version": "0.1.17",
   "description": "元气100%的时区转换工具：轻松读懂时差。",
   "icons": {
     "16": "src/assets/icon-16.png",
@@ -16,7 +16,7 @@
     "type": "module"
   },
   "action": {
-    "default_title": "Time Translator · 元气100%",
+    "default_title": "Time Translator – Time Zone Converter · 元气100%",
     "default_icon": {
       "16": "src/assets/icon-16.png",
       "32": "src/assets/icon-32.png"
