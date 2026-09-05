@@ -1,6 +1,8 @@
 import confetti from "canvas-confetti";
+import celebrationYearFontUrl from "./assets/Baloo2-ExtraBold.woff2";
 import { isBlockedSite, normalizeBlockedSites } from "./shared/config.js";
 import { getAnonymousInstallId, getInstallId } from "./shared/install-id.js";
+import { getCuteZodiacEmoji } from "./shared/zodiac.js";
 
 let tooltipHost = null;
 let requestSequence = 0;
@@ -23,7 +25,129 @@ let anonymousInstallId = "";
 let magicCode = "";
 
 const POINTER_MOVE_THRESHOLD = 4;
+const STORE_EXTENSION_ID = "iifmlolneppjniafidlbdffpmjbnlgoe";
+const HOLIDAY_PREVIEW_ORIGINS = new Set(["http://localhost:8788", "http://127.0.0.1:8788"]);
 const CELEBRATION_COLORS = ["#7c5cfc", "#a97cff", "#d48bff", "#4d427f", "#ffbd32"];
+const FREEZE_DRY_COLORS = ["#f1d29a", "#d9ae73", "#a8794c"];
+const NEW_YEAR_ACCENT_COLOR = "#9575e6";
+const CELEBRATION_YEAR_FONT_NAME = "Time Translator Baloo 2";
+const CELEBRATION_YEAR_FONT_FAMILY = `"${CELEBRATION_YEAR_FONT_NAME}", sans-serif`;
+
+function createHolidayEmojiPool(weightedEmoji) {
+  return weightedEmoji.flatMap(([text, weight]) => Array.from({ length: weight }, () => text));
+}
+
+const HOLIDAY_THEMES = {
+  "new-year": {
+    colors: ["#c9363e", "#e55745", "#f4b83f", "#ffe29a"],
+    emoji: createHolidayEmojiPool([["🎉", 10], ["🎊", 10], ["✨", 6]]),
+    uprightEmoji: createHolidayEmojiPool([["🥳", 6], ["🎆", 3], ["🎇", 3], ["🥂", 10]]),
+    zodiacWeight: 6,
+    yearLabelWeight: 6,
+    emojiRatio: 0.44,
+    emojiScalar: 1.45,
+    featuredEmojiScalar: 1.22,
+    featuredEmojiColor: NEW_YEAR_ACCENT_COLOR,
+    featuredEmojiFontFamily: CELEBRATION_YEAR_FONT_FAMILY,
+    emojiRasterScale: 2,
+    extraParticleRatio: 0.06,
+    fallbackEmojiShapes: ["four-point-sparkle", "rounded-diamond"],
+    shapes: ["circle", "square", "four-point-sparkle"],
+    message: "🎆 新年顺心！",
+    comboMessageKey: "new-year",
+    comboMessageTemplates: [
+      "🎆✨🧩{name}～✨🎊",
+      "✨ Happy new year！",
+      "🌅 希望你{year}心情也是靓靓的！",
+      "🥂 希望今年的你，也是自由快乐的",
+      "🥳 希望新的一年，你的 Se 也有进步",
+    ],
+    messageColor: NEW_YEAR_ACCENT_COLOR,
+  },
+  halloween: {
+    colors: ["#f47721", "#ffad32", "#6c3aa8", "#24152f"],
+    emoji: ["🦇", "🍬", "🍭"],
+    uprightEmoji: ["🎃", "🎃", "👻", "🧙‍♀️", "🧛"],
+    emojiRatio: 0.5,
+    emojiScalar: 1.5,
+    emojiRasterScale: 2,
+    extraParticleRatio: 0.05,
+    fallbackEmojiShapes: ["circle", "rounded-diamond"],
+    shapes: ["circle", "rounded-diamond"],
+    message: "🎃 Trick or treat!",
+    comboMessages: [
+      "🎃✨🧩{name}～✨👻",
+      "👻 Boo! Happy Halloween!",
+    ],
+    messageColor: "#d86112",
+  },
+  christmas: {
+    colors: ["#c84d59", "#e7b652", "#f8ead2", "#d6eaf0"],
+    emoji: ["❄️", "❄️", "❄️", "❄️", "🎁", "🍭", "☃️", "🍬"],
+    uprightEmoji: ["🎄", "🎄", "🍎", "🔔", "🦌"],
+    emojiRatio: 0.52,
+    emojiScalar: 1.45,
+    emojiRasterScale: 2,
+    emojiTicksMultiplier: 1.75,
+    extraParticleRatio: 0.12,
+    fallbackEmojiShapes: ["circle", "rounded-diamond"],
+    shapes: ["circle", "square"],
+    message: "🔔 Merry Christmas!",
+    comboMessages: [
+      "🎄✨🧩{name}～✨🔔",
+      "🎄 Merry Christmas!",
+      "☃️ 冬天有点冷，希望你的圣诞节是暖暖的",
+      "🍎 希望平安、温暖和快乐，都随着圣诞节来到你身边",
+    ],
+    messageColor: "#b6404a",
+  },
+  "mid-autumn": {
+    colors: ["#d9aa3e", "#f4da88", "#8baa9b", "#f5edda"],
+    // This pool uses two entries as one weight unit so the moon can sit at 1.5.
+    emoji: ["✨", "✨", "✨", "✨"],
+    uprightEmoji: ["🌕", "🌕", "🐇", "🐇", "🐇", "🐇", "🥮", "🥮", "🏮", "🏮", "🌙", "🌙"],
+    featuredUprightEmoji: ["⭐", "⭐"],
+    featuredEmojiScalar: 1.58,
+    emojiRatio: 0.5,
+    emojiScalar: 1.48,
+    emojiRasterScale: 2,
+    extraParticleRatio: 0.08,
+    fallbackEmojiShapes: ["circle", "four-point-sparkle"],
+    shapes: ["circle", "four-point-sparkle"],
+    message: "🌕 中秋快乐！要开心哦",
+    comboMessages: [
+      "🐇✨🧩{name}～✨🌕",
+      "🐇 花好月圆！",
+      "🌕 今晚月亮很圆，希望你的心情也是圆满",
+      "🐇 希望你抬头看月亮时，能想起一些开心的事",
+    ],
+    messageColor: "#9a7013",
+  },
+  "spring-festival": {
+    colors: ["#bd2734", "#e34b3f", "#f0a72f", "#ffe08a"],
+    emoji: createHolidayEmojiPool([["🎊", 4], ["✨", 4]]),
+    uprightEmoji: createHolidayEmojiPool([["🧧", 4], ["🏮", 5], ["🧨", 3], ["🥟", 3], ["🍊", 4]]),
+    zodiacYearLabelWeight: 3,
+    emojiRatio: 0.52,
+    emojiScalar: 1.48,
+    featuredEmojiScalar: 1.24,
+    featuredEmojiColor: "#bd2734",
+    featuredEmojiFontFamily: CELEBRATION_YEAR_FONT_FAMILY,
+    emojiRasterScale: 2,
+    extraParticleRatio: 0.1,
+    fallbackEmojiShapes: ["circle", "rounded-diamond"],
+    shapes: ["circle", "rounded-diamond"],
+    message: "🧧 新年快乐",
+    comboMessages: [
+      "🏮✨🧩{name}～✨🧧",
+      "🧧 新年快乐",
+      "🧨 希望新的一年闲有所趣",
+      "🧧 新岁胜旧岁，开心多一点，烦恼少一点",
+    ],
+    messageColor: "#bd3340",
+  },
+};
+const HOLIDAY_THEME_KEYS = Object.keys(HOLIDAY_THEMES);
 const COMBO_CELEBRATION_THEMES = [
   {
     colors: ["#4b2e83", "#6d4aff", "#a78bfa", "#f2b134", "#ffd166", "#fff0b3"],
@@ -54,6 +178,9 @@ let confettiInstance = null;
 const celebrationClickStates = new WeakMap();
 const comboTransparencyTimers = new WeakMap();
 const comboShapes = new Map();
+const holidayEmojiShapes = new Map();
+const holidayComboMessageIndices = new Map();
+let celebrationYearFontLoaded = false;
 let clickEasterEggMessageIndex = 0;
 let comboThemeIndex = 0;
 
@@ -511,6 +638,7 @@ function getComboShape(name) {
   const paths = {
     "rounded-diamond": "M5 .5C5.5 1.3 8.7 4.4 9.5 5 8.7 5.6 5.5 8.7 5 9.5 4.5 8.7 1.3 5.6 .5 5 1.3 4.4 4.5 1.3 5 .5Z",
     "four-point-sparkle": "M5 0C5.7 3.6 6.4 4.3 10 5 6.4 5.7 5.7 6.4 5 10 4.3 6.4 3.6 5.7 0 5 3.6 4.3 4.3 3.6 5 0Z",
+    "freeze-dried": "M1.4 1.8C2.1 .8 3.3 .4 4.3 .8L8.2 1.7C9.3 2 9.8 3 9.3 4.1L8 8C7.7 9.1 6.6 9.6 5.6 9.2L1.8 8.1C.8 7.8 .3 6.8 .6 5.8Z",
   };
   const matrices = {
     // The sparkle fills its box more completely than the built-in star, so
@@ -534,6 +662,304 @@ function getNextComboTheme() {
     colors: theme.colors,
     shapes: customShape ? [customShape, customShape, ...theme.supportingShapes] : theme.fallbackShapes,
   };
+}
+
+function isHolidayPreviewPage() {
+  return isExtensionContextValid()
+    && chrome.runtime.id !== STORE_EXTENSION_ID
+    && HOLIDAY_PREVIEW_ORIGINS.has(location.origin);
+}
+
+function getHolidayPreviewKey() {
+  if (!isHolidayPreviewPage()) return "";
+  const previewKey = new URLSearchParams(location.search).get("tt-holiday")?.trim().toLocaleLowerCase() || "";
+  return HOLIDAY_THEME_KEYS.includes(previewKey) ? previewKey : "";
+}
+
+function ensureHolidayPreviewControl() {
+  if (!isHolidayPreviewPage() || document.getElementById("time-translator-holiday-preview-control")) return;
+  const host = document.createElement("div");
+  host.id = "time-translator-holiday-preview-control";
+  Object.assign(host.style, {
+    position: "fixed",
+    right: "12px",
+    top: "12px",
+    zIndex: "2147483647",
+  });
+  const shadow = host.attachShadow({ mode: "open" });
+  shadow.innerHTML = `
+    <style>
+      :host { color-scheme: light; }
+      .preview-control { align-items: center; background: rgba(248, 245, 236, .94); border: 1px solid rgba(29, 37, 40, .18); border-radius: 10px; box-shadow: 0 4px 16px rgba(22, 27, 29, .12); display: flex; gap: 8px; padding: 6px 7px 6px 9px; }
+      label { color: #596260; font: 700 9px/1 ui-sans-serif, system-ui, sans-serif; letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; }
+      .select-wrap { position: relative; }
+      .select-wrap::after { color: #69716f; content: "⌄"; font: 700 12px/1 ui-sans-serif, system-ui, sans-serif; pointer-events: none; position: absolute; right: 8px; top: 7px; }
+      select { appearance: none; background: #e7e1d4; border: 0; border-radius: 7px; color: #1d2528; cursor: pointer; font: 650 11px/1.2 ui-sans-serif, system-ui, sans-serif; min-width: 142px; outline: none; padding: 7px 25px 7px 8px; }
+      select:focus-visible { box-shadow: 0 0 0 3px rgba(89, 116, 62, .22); }
+    </style>
+    <div class="preview-control">
+      <label for="holiday-preview-mode">Test mode</label>
+      <div class="select-wrap">
+        <select id="holiday-preview-mode" aria-label="Confetti test mode">
+          <option value="normal">Normal</option>
+          <option value="new-year">🎆 New Year</option>
+          <option value="halloween">🎃 Halloween</option>
+          <option value="christmas">🎄 Christmas</option>
+          <option value="mid-autumn">🌕 Mid-Autumn</option>
+          <option value="spring-festival">🏮 Spring Festival</option>
+        </select>
+      </div>
+    </div>`;
+  const modeSelect = shadow.querySelector("select");
+  modeSelect.value = getHolidayPreviewKey() || "normal";
+  modeSelect.addEventListener("change", () => {
+    const nextUrl = new URL(location.href);
+    if (modeSelect.value === "normal") nextUrl.searchParams.delete("tt-holiday");
+    else nextUrl.searchParams.set("tt-holiday", modeSelect.value);
+    location.assign(nextUrl.href);
+  });
+  document.documentElement.append(host);
+}
+
+ensureHolidayPreviewControl();
+
+function getChineseCalendarDate(date) {
+  try {
+    const parts = new Intl.DateTimeFormat("en-u-ca-chinese-nu-latn", { day: "numeric", month: "numeric" }).formatToParts(date);
+    const month = Number(parts.find((part) => part.type === "month")?.value);
+    const day = Number(parts.find((part) => part.type === "day")?.value);
+    return Number.isInteger(month) && Number.isInteger(day) ? { month, day } : null;
+  } catch {
+    return null;
+  }
+}
+
+function withHolidayZodiac(theme, date) {
+  if (!theme?.zodiacWeight && !theme?.yearLabelWeight && !theme?.zodiacYearLabelWeight) return theme;
+  const year = date.getFullYear();
+  if (!Number.isInteger(year)) return theme;
+  const zodiacEmoji = getCuteZodiacEmoji(year);
+  const zodiacEmojiPool = zodiacEmoji
+    ? Array.from({ length: theme.zodiacWeight || 0 }, () => zodiacEmoji)
+    : [];
+  const yearLabelPool = Array.from({ length: theme.yearLabelWeight || 0 }, () => `✨${year}✨`);
+  const zodiacYearLabelPool = zodiacEmoji
+    ? Array.from({ length: theme.zodiacYearLabelWeight || 0 }, () => `${zodiacEmoji} ${year} ${zodiacEmoji}`)
+    : [];
+  const comboMessages = theme.comboMessageTemplates?.map((template) => template.replaceAll("{year}", String(year)));
+  return {
+    ...theme,
+    uprightEmoji: [...(theme.uprightEmoji || []), ...zodiacEmojiPool],
+    featuredUprightEmoji: [...(theme.featuredUprightEmoji || []), ...yearLabelPool, ...zodiacYearLabelPool],
+    ...(comboMessages ? { comboMessages } : {}),
+  };
+}
+
+function getHolidayTheme(date = new Date()) {
+  const previewKey = getHolidayPreviewKey();
+  if (previewKey) return withHolidayZodiac(HOLIDAY_THEMES[previewKey], date);
+
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+  if (month === 1 && day === 1) return withHolidayZodiac(HOLIDAY_THEMES["new-year"], date);
+  if (month === 10 && day === 31) return withHolidayZodiac(HOLIDAY_THEMES.halloween, date);
+  if (month === 12 && day === 25) return withHolidayZodiac(HOLIDAY_THEMES.christmas, date);
+
+  const lunarDate = getChineseCalendarDate(date);
+  if (lunarDate?.month === 1 && lunarDate.day === 1) return withHolidayZodiac(HOLIDAY_THEMES["spring-festival"], date);
+  if (lunarDate?.month === 8 && lunarDate.day === 15) return withHolidayZodiac(HOLIDAY_THEMES["mid-autumn"], date);
+  return null;
+}
+
+function getHolidayShapes(shapeNames) {
+  const builtinShapes = new Set(["circle", "square", "star"]);
+  return shapeNames.map((name) => (builtinShapes.has(name) ? name : getComboShape(name))).filter(Boolean);
+}
+
+async function loadCelebrationYearFont() {
+  if (typeof FontFace !== "function" || !document.fonts) return;
+  const font = new FontFace(
+    CELEBRATION_YEAR_FONT_NAME,
+    `url(${celebrationYearFontUrl})`,
+    { style: "normal", weight: "800" },
+  );
+  await font.load();
+  document.fonts.add(font);
+  celebrationYearFontLoaded = true;
+  holidayEmojiShapes.clear();
+}
+
+void loadCelebrationYearFont().catch(() => {
+  celebrationYearFontLoaded = false;
+});
+
+function getHolidayEmojiShapes(
+  theme,
+  texts = theme.emoji,
+  displayScalar = theme.emojiScalar,
+  displayColor = "",
+  displayFontFamily = "",
+) {
+  if (typeof confetti.shapeFromText !== "function") return [];
+  const rasterScalar = displayScalar * (theme.emojiRasterScale || 1);
+  return texts.map((text) => {
+    const fontFamily = celebrationYearFontLoaded ? displayFontFamily : "";
+    const cacheKey = `${text}:${rasterScalar}:${displayColor || "native"}:${fontFamily || "native"}`;
+    if (holidayEmojiShapes.has(cacheKey)) return holidayEmojiShapes.get(cacheKey);
+    try {
+      const shape = confetti.shapeFromText({
+        text,
+        scalar: rasterScalar,
+        ...(displayColor ? { color: displayColor } : {}),
+        ...(fontFamily ? { fontFamily } : {}),
+      });
+      holidayEmojiShapes.set(cacheKey, shape);
+      return shape;
+    } catch {
+      return null;
+    }
+  }).filter(Boolean);
+}
+
+function consumeHolidayComboMessage(theme) {
+  const messages = theme.comboMessages;
+  if (!Array.isArray(messages) || messages.length === 0) return formatCelebrationMessage(theme.comboMessage);
+  const messageKey = theme.comboMessageKey || messages;
+  const index = holidayComboMessageIndices.get(messageKey) || 0;
+  holidayComboMessageIndices.set(messageKey, (index + 1) % messages.length);
+  return formatCelebrationMessage(messages[index]);
+}
+
+function triggerHolidayCelebration(shoot, origin, button, theme, { combo = false, profile = getCelebrationProfile(0), showMessage = false } = {}) {
+  if (!theme) return;
+  const normalAccessoryCount = Math.round(8 + profile.charge * 8);
+  const baselineParticleCount = profile.particleCount + normalAccessoryCount;
+  const extraParticleCount = Math.round(baselineParticleCount * theme.extraParticleRatio);
+  const totalParticleCount = baselineParticleCount + extraParticleCount;
+  const emojiParticleCount = Math.min(36, Math.max(8, Math.round(totalParticleCount * theme.emojiRatio)));
+  const confettiParticleCount = Math.max(0, totalParticleCount - emojiParticleCount);
+  const confettiShapes = getHolidayShapes(theme.shapes);
+  const emojiShapes = getHolidayEmojiShapes(theme);
+  const uprightEmojiShapes = getHolidayEmojiShapes(theme, theme.uprightEmoji || []);
+  const featuredEmojiScalar = theme.featuredEmojiScalar || theme.emojiScalar;
+  const featuredEmojiColor = theme.featuredEmojiColor || "";
+  const featuredEmojiFontFamily = theme.featuredEmojiFontFamily || "";
+  const featuredUprightEmojiShapes = getHolidayEmojiShapes(
+    theme,
+    theme.featuredUprightEmoji || [],
+    featuredEmojiScalar,
+    featuredEmojiColor,
+    featuredEmojiFontFamily,
+  );
+  const emojiShapeWeight = emojiShapes.length + uprightEmojiShapes.length + featuredUprightEmojiShapes.length;
+  const featuredUprightParticleCount = featuredUprightEmojiShapes.length && emojiShapeWeight > 0
+    ? Math.min(emojiParticleCount, Math.max(1, Math.round(emojiParticleCount * featuredUprightEmojiShapes.length / emojiShapeWeight)))
+    : 0;
+  const movingEmojiParticleCount = emojiShapeWeight === 0
+    ? emojiParticleCount
+    : emojiShapes.length
+      ? Math.min(emojiParticleCount - featuredUprightParticleCount, Math.max(1, Math.round(emojiParticleCount * emojiShapes.length / emojiShapeWeight)))
+      : 0;
+  const uprightEmojiParticleCount = emojiShapeWeight > 0
+    ? emojiParticleCount - featuredUprightParticleCount - movingEmojiParticleCount
+    : 0;
+  const emojiTicks = Math.round(profile.ticks * (theme.emojiTicksMultiplier || 1));
+  if (confettiShapes.length) {
+    shoot({
+      angle: 90,
+      colors: theme.colors,
+      decay: profile.decay,
+      drift: (Math.random() - 0.5) * (0.35 + profile.charge * 0.35),
+      flat: false,
+      gravity: profile.gravity,
+      origin,
+      particleCount: confettiParticleCount,
+      scalar: profile.scalar,
+      shapes: confettiShapes,
+      spread: profile.spread,
+      startVelocity: profile.startVelocity,
+      ticks: profile.ticks,
+    });
+  }
+  const decorativeShapes = emojiShapes.length ? emojiShapes : getHolidayShapes(theme.fallbackEmojiShapes);
+  if (decorativeShapes.length && movingEmojiParticleCount > 0) {
+    shoot({
+      angle: 90,
+      colors: theme.colors,
+      decay: profile.decay,
+      drift: (Math.random() - 0.5) * (0.35 + profile.charge * 0.35),
+      flat: false,
+      gravity: profile.gravity,
+      origin,
+      particleCount: movingEmojiParticleCount,
+      scalar: emojiShapes.length ? theme.emojiScalar : profile.scalar,
+      shapes: decorativeShapes,
+      spread: profile.spread,
+      startVelocity: profile.startVelocity,
+      ticks: emojiTicks,
+    });
+  }
+  if (uprightEmojiShapes.length && uprightEmojiParticleCount > 0) {
+    shoot({
+      angle: 90,
+      colors: theme.colors,
+      decay: profile.decay,
+      drift: (Math.random() - 0.5) * (0.35 + profile.charge * 0.35),
+      flat: true,
+      gravity: profile.gravity,
+      origin,
+      particleCount: uprightEmojiParticleCount,
+      scalar: theme.emojiScalar,
+      shapes: uprightEmojiShapes,
+      spread: profile.spread,
+      startVelocity: profile.startVelocity,
+      ticks: emojiTicks,
+    });
+  }
+  if (featuredUprightEmojiShapes.length && featuredUprightParticleCount > 0) {
+    shoot({
+      angle: 90,
+      colors: theme.colors,
+      decay: profile.decay,
+      drift: (Math.random() - 0.5) * (0.35 + profile.charge * 0.35),
+      flat: true,
+      gravity: profile.gravity,
+      origin,
+      particleCount: featuredUprightParticleCount,
+      scalar: featuredEmojiScalar,
+      shapes: featuredUprightEmojiShapes,
+      spread: profile.spread,
+      startVelocity: profile.startVelocity,
+      ticks: emojiTicks,
+    });
+  }
+  if (showMessage) {
+    showEasterEggMessage(button, {
+      color: theme.messageColor,
+      shadowColor: `${theme.messageColor}40`,
+      text: combo ? consumeHolidayComboMessage(theme) : theme.message,
+    });
+  }
+}
+
+function triggerFreezeDriedParticles(shoot, origin, { particleCount = 10, spread = 74, startVelocity = 42, gravity = 0.82, ticks = 220, scalar = 0.92 } = {}) {
+  const shape = getComboShape("freeze-dried");
+  if (!shape) return;
+  shoot({
+    angle: 90,
+    colors: FREEZE_DRY_COLORS,
+    decay: 0.91,
+    drift: (Math.random() - 0.5) * 0.3,
+    flat: false,
+    gravity,
+    origin,
+    particleCount,
+    scalar,
+    shapes: [shape],
+    spread,
+    startVelocity,
+    ticks,
+  });
 }
 
 function showEasterEggMessage(button, { color = "#ef5b8b", shadowColor = "rgba(239, 91, 139, .24)", text = `🧩 ${getCelebrationName()}~` } = {}) {
@@ -563,9 +989,27 @@ function activateComboTransparency(button) {
   comboTransparencyTimers.set(card, timer);
 }
 
-function triggerComboCelebration(button, { messageText = `🧩 ${getCelebrationName()}~` } = {}) {
+function triggerComboCelebration(button) {
   const origin = getCelebrationOrigin(button);
   const shoot = getConfettiInstance();
+  const holidayTheme = getHolidayTheme();
+  if (holidayTheme) {
+    triggerHolidayCelebration(shoot, origin, button, holidayTheme, {
+      combo: true,
+      showMessage: true,
+      profile: {
+        charge: 1,
+        decay: 0.91,
+        gravity: 0.68,
+        particleCount: 54,
+        scalar: 1.05,
+        spread: 86,
+        startVelocity: 38,
+        ticks: 190,
+      },
+    });
+    return;
+  }
   const { colors, shapes } = getNextComboTheme();
   shoot({
     angle: 90,
@@ -582,7 +1026,15 @@ function triggerComboCelebration(button, { messageText = `🧩 ${getCelebrationN
     startVelocity: 38,
     ticks: 190,
   });
-  showEasterEggMessage(button, { text: messageText });
+  triggerFreezeDriedParticles(shoot, origin, {
+    particleCount: 16,
+    gravity: 0.8,
+    scalar: 1,
+    startVelocity: 44,
+    spread: 76,
+    ticks: 230,
+  });
+  showEasterEggMessage(button, { text: consumeClickEasterEggMessage() });
 }
 
 function consumeClickEasterEggMessage() {
@@ -603,18 +1055,11 @@ function recordCelebrationClick(button) {
     return false;
   }
   celebrationClickStates.delete(button);
-  triggerComboCelebration(button, { messageText: consumeClickEasterEggMessage() });
+  triggerComboCelebration(button);
   return true;
 }
 
-function triggerCelebration(button, holdDuration = 0) {
-  const card = button.closest(".card") || button.getRootNode?.().querySelector?.(".card");
-  const layer = card?.querySelector(".celebration-layer");
-  if (!card || !layer) return;
-  const profile = getCelebrationProfile(holdDuration);
-
-  const origin = getCelebrationOrigin(button);
-  const shoot = getConfettiInstance();
+function triggerNormalCelebration(shoot, origin, profile) {
   shoot({
     angle: 90,
     colors: CELEBRATION_COLORS,
@@ -630,6 +1075,33 @@ function triggerCelebration(button, holdDuration = 0) {
     startVelocity: profile.startVelocity,
     ticks: profile.ticks,
   });
+  triggerFreezeDriedParticles(shoot, origin, {
+    particleCount: Math.round(8 + profile.charge * 8),
+    gravity: Math.min(0.9, profile.gravity + 0.08),
+    scalar: Number((0.92 + profile.charge * 0.12).toFixed(2)),
+    startVelocity: profile.startVelocity + 5,
+    spread: Math.round(profile.spread * 0.78),
+    ticks: profile.ticks + 35,
+  });
+}
+
+function triggerCelebration(button, holdDuration = 0) {
+  const card = button.closest(".card") || button.getRootNode?.().querySelector?.(".card");
+  const layer = card?.querySelector(".celebration-layer");
+  if (!card || !layer) return "none";
+  const profile = getCelebrationProfile(holdDuration);
+  const origin = getCelebrationOrigin(button);
+  const shoot = getConfettiInstance();
+  const holidayTheme = getHolidayTheme();
+  const mode = holidayTheme ? "holiday" : "normal";
+  if (holidayTheme) {
+    triggerHolidayCelebration(shoot, origin, button, holidayTheme, {
+      profile,
+      showMessage: holdDuration >= CELEBRATION_SHAKE_THRESHOLD_MS,
+    });
+  } else {
+    triggerNormalCelebration(shoot, origin, profile);
+  }
 
   button.classList.remove("is-celebrated");
   void button.offsetWidth;
@@ -637,6 +1109,7 @@ function triggerCelebration(button, holdDuration = 0) {
   setTimeout(() => {
     button.classList.remove("is-celebrated");
   }, profile.flightDuration);
+  return mode;
 }
 
 function renderLoading(text, rect) {
@@ -806,8 +1279,10 @@ function bindCelebrationButton(host) {
     pendingHoldDuration = null;
     const isLongPress = holdDuration >= CELEBRATION_SHAKE_THRESHOLD_MS;
     if (isLongPress) {
-      triggerCelebration(celebrateButton, holdDuration);
-      showEasterEggMessage(celebrateButton, { color: "#7c5cfc", shadowColor: "rgba(124, 92, 252, .36)", text: `🧩 ${getCelebrationName()}~ 接案順心！` });
+      const celebrationMode = triggerCelebration(celebrateButton, holdDuration);
+      if (celebrationMode === "normal") {
+        showEasterEggMessage(celebrateButton, { color: "#7c5cfc", shadowColor: "rgba(124, 92, 252, .36)", text: `🧩 ${getCelebrationName()}~ 接案順心！` });
+      }
       return;
     }
     const isClickEasterEgg = recordCelebrationClick(celebrateButton);

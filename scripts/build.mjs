@@ -15,5 +15,6 @@ await build({
   format: "iife",
   outfile: resolve(dist, "src/content.js"),
   platform: "browser",
+  loader: { ".woff2": "dataurl" },
 });
 console.log(`Built extension to ${dist}`);

@@ -119,6 +119,29 @@ test("成功转换后的 Tooltip 提供接案順心!按钮和 Canvas 蓄力彩�
   assert.match(contentSource, /globalThis\.innerWidth/);
   assert.match(contentSource, /particleCount/);
   assert.match(contentSource, /shapes: \["square", "circle", "star"\]/);
+  assert.match(contentSource, /const FREEZE_DRY_COLORS = \["#f1d29a", "#d9ae73", "#a8794c"\]/);
+  assert.match(contentSource, /"freeze-dried": "M1\.4 1\.8C2\.1 \.8 3\.3 \.4 4\.3 \.8L8\.2 1\.7C9\.3 2 9\.8 3 9\.3 4\.1L8 8C7\.7 9\.1 6\.6 9\.6 5\.6 9\.2L1\.8 8\.1C\.8 7\.8 \.3 6\.8 \.6 5\.8Z"/);
+  assert.match(contentSource, /function triggerFreezeDriedParticles/);
+  assert.match(contentSource, /triggerFreezeDriedParticles\(shoot, origin/);
+  assert.match(contentSource, /const HOLIDAY_THEMES = \{/);
+  assert.match(contentSource, /"new-year"/);
+  assert.match(contentSource, /halloween/);
+  assert.match(contentSource, /christmas/);
+  assert.match(contentSource, /"mid-autumn"/);
+  assert.match(contentSource, /"spring-festival"/);
+  assert.match(contentSource, /emoji: \["✨", "✨", "✨", "✨"\]/);
+  assert.match(contentSource, /uprightEmoji: \["🌕", "🌕", "🐇", "🐇", "🐇", "🐇", "🥮", "🥮", "🏮", "🏮", "🌙", "🌙"\]/);
+  assert.match(contentSource, /featuredUprightEmoji: \["⭐", "⭐"\]/);
+  assert.match(contentSource, /featuredEmojiScalar: 1\.58/);
+  assert.match(contentSource, /message: "🌕 中秋快乐！要开心哦"/);
+  assert.match(contentSource, /comboMessages: \[[\s\S]*?"🐇 花好月圆！",[\s\S]*?"🌕 今晚月亮很圆，希望你的心情也是圆满",[\s\S]*?"🐇 希望你抬头看月亮时，能想起一些开心的事",[\s\S]*?\]/);
+  assert.match(contentSource, /function getHolidayPreviewKey/);
+  assert.match(contentSource, /tt-holiday/);
+  assert.match(contentSource, /function getChineseCalendarDate/);
+  assert.match(contentSource, /en-u-ca-chinese-nu-latn/);
+  assert.match(contentSource, /function triggerHolidayCelebration/);
+  assert.match(contentSource, /function getHolidayEmojiShapes/);
+  assert.match(contentSource, /confetti\.shapeFromText\(\{/);
   assert.match(contentSource, /flightDuration/);
   assert.match(contentSource, /celebration-layer/);
   assert.doesNotMatch(contentSource, /celebration-ray|celebration-ring|celebration-flash/);
@@ -138,6 +161,206 @@ test("成功转换后的 Tooltip 提供接案順心!按钮和 Canvas 蓄力彩�
   assert.doesNotMatch(contentSource, /vipEnabled|isVipInstallId/);
 });
 
+test("普通模式和节日模式使用互斥的彩带与文案", () => {
+  const normalCelebrationSource = contentSource.slice(
+    contentSource.indexOf("function triggerNormalCelebration"),
+    contentSource.indexOf("function triggerCelebration"),
+  );
+  const celebrationRouterSource = contentSource.slice(
+    contentSource.indexOf("function triggerCelebration"),
+    contentSource.indexOf("function renderLoading"),
+  );
+  const comboCelebrationSource = contentSource.slice(
+    contentSource.indexOf("function triggerComboCelebration"),
+    contentSource.indexOf("function consumeClickEasterEggMessage"),
+  );
+
+  assert.match(normalCelebrationSource, /colors: CELEBRATION_COLORS/);
+  assert.match(normalCelebrationSource, /triggerFreezeDriedParticles\(shoot, origin/);
+  assert.doesNotMatch(normalCelebrationSource, /Holiday|getHoliday|triggerHoliday/);
+  assert.match(celebrationRouterSource, /const holidayTheme = getHolidayTheme\(\)/);
+  assert.match(celebrationRouterSource, /if \(holidayTheme\) \{[\s\S]*?triggerHolidayCelebration[\s\S]*?\} else \{[\s\S]*?triggerNormalCelebration/);
+  assert.match(comboCelebrationSource, /if \(holidayTheme\) \{[\s\S]*?triggerHolidayCelebration[\s\S]*?return;[\s\S]*?\}[\s\S]*?getNextComboTheme\(\)/);
+});
+
+test("节日模式使用可辨认的 Emoji、专属配色和专属文案", () => {
+  const holidayThemesSource = contentSource.slice(
+    contentSource.indexOf("const HOLIDAY_THEMES = {"),
+    contentSource.indexOf("const HOLIDAY_THEME_KEYS"),
+  );
+
+  assert.match(contentSource, /function triggerHolidayCelebration\(shoot, origin, button, theme/);
+  assert.match(contentSource, /emoji: \["🦇", "🍬", "🍭"\]/);
+  assert.match(contentSource, /uprightEmoji: \["🎃", "🎃", "👻", "🧙‍♀️", "🧛"\]/);
+  assert.match(contentSource, /emoji: \["❄️", "❄️", "❄️", "❄️", "🎁", "🍭", "☃️", "🍬"\]/);
+  assert.match(contentSource, /uprightEmoji: \["🎄", "🎄", "🍎", "🔔", "🦌"\]/);
+  assert.match(contentSource, /emoji: \["✨", "✨", "✨", "✨"\]/);
+  assert.match(contentSource, /uprightEmoji: \["🌕", "🌕", "🐇", "🐇", "🐇", "🐇", "🥮", "🥮", "🏮", "🏮", "🌙", "🌙"\]/);
+  assert.match(contentSource, /featuredUprightEmoji: \["⭐", "⭐"\]/);
+  assert.match(contentSource, /emoji: createHolidayEmojiPool\(\[\["🎊", 4\], \["✨", 4\]\]\)/);
+  assert.match(contentSource, /uprightEmoji: createHolidayEmojiPool\(\[\["🧧", 4\], \["🏮", 5\], \["🧨", 3\], \["🥟", 3\], \["🍊", 4\]\]\)/);
+  assert.match(contentSource, /const decorativeShapes = emojiShapes\.length \? emojiShapes : getHolidayShapes\(theme\.fallbackEmojiShapes\)/);
+  assert.match(contentSource, /const emojiParticleCount = Math\.min\(36, Math\.max\(8, Math\.round\(totalParticleCount \* theme\.emojiRatio\)\)\)/);
+  assert.match(contentSource, /emojiRatio: 0\.5/);
+  assert.match(contentSource, /colors: \["#c84d59", "#e7b652", "#f8ead2", "#d6eaf0"\]/);
+  assert.match(contentSource, /shapes: \["circle", "square"\]/);
+  assert.doesNotMatch(holidayThemesSource, /accentShapes|accentColors|accentScalar/);
+  assert.match(contentSource, /message: "🔔 Merry Christmas!"/);
+  assert.match(contentSource, /comboMessages: \[[\s\S]*?"🎄 Merry Christmas!",[\s\S]*?"☃️ 冬天有点冷，希望你的圣诞节是暖暖的",[\s\S]*?"🍎 希望平安、温暖和快乐，都随着圣诞节来到你身边",[\s\S]*?\]/);
+  assert.doesNotMatch(holidayThemesSource, /shapes: \[[^\]]*"star"[^\]]*\]/);
+  assert.match(contentSource, /function consumeHolidayComboMessage\(theme\)/);
+  assert.match(contentSource, /"🎆✨🧩\{name\}～✨🎊"/);
+  assert.match(contentSource, /"🎃✨🧩\{name\}～✨👻"/);
+  assert.match(contentSource, /"🎄✨🧩\{name\}～✨🔔"/);
+  assert.match(contentSource, /"🐇✨🧩\{name\}～✨🌕"/);
+  assert.match(contentSource, /"🏮✨🧩\{name\}～✨🧧"/);
+  assert.match(contentSource, /const messageKey = theme\.comboMessageKey \|\| messages/);
+  assert.match(contentSource, /holidayComboMessageIndices\.set\(messageKey, \(index \+ 1\) % messages\.length\)/);
+  assert.match(contentSource, /return formatCelebrationMessage\(messages\[index\]\)/);
+  assert.match(contentSource, /text: combo \? consumeHolidayComboMessage\(theme\) : theme\.message/);
+});
+
+test("圣诞仅使用 Emoji 雪花，不再绘制 SVG 雪花轮廓", () => {
+  const holidayCelebrationSource = contentSource.slice(
+    contentSource.indexOf("function triggerHolidayCelebration"),
+    contentSource.indexOf("function triggerFreezeDriedParticles"),
+  );
+
+  assert.doesNotMatch(contentSource, /snowflake: "M/);
+  assert.doesNotMatch(holidayCelebrationSource, /accentParticleCount|accentShapes|accentColors|accentScalar/);
+});
+
+test("圣诞 Emoji 单独延长淡出时间，不影响普通彩纸", () => {
+  const holidayCelebrationSource = contentSource.slice(
+    contentSource.indexOf("function triggerHolidayCelebration"),
+    contentSource.indexOf("function triggerFreezeDriedParticles"),
+  );
+
+  assert.match(contentSource, /emojiTicksMultiplier: 1\.75/);
+  assert.equal((contentSource.match(/emojiTicksMultiplier:/g) || []).length, 1);
+  assert.match(holidayCelebrationSource, /const emojiTicks = Math\.round\(profile\.ticks \* \(theme\.emojiTicksMultiplier \|\| 1\)\)/);
+  assert.match(holidayCelebrationSource, /particleCount: confettiParticleCount,[\s\S]*ticks: profile\.ticks/);
+  assert.match(holidayCelebrationSource, /particleCount: movingEmojiParticleCount,[\s\S]*ticks: emojiTicks/);
+});
+
+test("所有节日 Emoji 使用两倍栅格分辨率但保持原显示尺寸", () => {
+  const holidayThemesSource = contentSource.slice(
+    contentSource.indexOf("const HOLIDAY_THEMES = {"),
+    contentSource.indexOf("const HOLIDAY_THEME_KEYS"),
+  );
+  const emojiShapeSource = contentSource.slice(
+    contentSource.indexOf("function getHolidayEmojiShapes"),
+    contentSource.indexOf("function triggerHolidayCelebration"),
+  );
+
+  assert.match(holidayThemesSource, /emojiRasterScale: 2/);
+  assert.equal((holidayThemesSource.match(/emojiRasterScale:/g) || []).length, 5);
+  assert.match(emojiShapeSource, /const rasterScalar = displayScalar \* \(theme\.emojiRasterScale \|\| 1\)/);
+  assert.match(emojiShapeSource, /const cacheKey = `\$\{text\}:\$\{rasterScalar\}:\$\{displayColor \|\| "native"\}:\$\{fontFamily \|\| "native"\}`/);
+  assert.match(emojiShapeSource, /\.\.\.\(displayColor \? \{ color: displayColor \} : \{\}\)/);
+  assert.match(emojiShapeSource, /\.\.\.\(fontFamily \? \{ fontFamily \} : \{\}\)/);
+  assert.match(contentSource, /scalar: emojiShapes\.length \? theme\.emojiScalar : profile\.scalar/);
+  assert.match(contentSource, /scalar: theme\.emojiScalar/);
+});
+
+test("节日主体 Emoji 保持正向下落，只关闭自身旋转且不增加粒子总量", () => {
+  const holidayThemesSource = contentSource.slice(
+    contentSource.indexOf("const HOLIDAY_THEMES = {"),
+    contentSource.indexOf("const HOLIDAY_THEME_KEYS"),
+  );
+  const holidayCelebrationSource = contentSource.slice(
+    contentSource.indexOf("function triggerHolidayCelebration"),
+    contentSource.indexOf("function triggerFreezeDriedParticles"),
+  );
+
+  assert.equal((holidayThemesSource.match(/uprightEmoji:/g) || []).length, 5);
+  assert.match(contentSource, /function getHolidayEmojiShapes\([\s\S]*?displayFontFamily = "",[\s\S]*?\) \{/);
+  assert.match(holidayCelebrationSource, /const uprightEmojiShapes = getHolidayEmojiShapes\(theme, theme\.uprightEmoji \|\| \[\]\)/);
+  assert.match(holidayCelebrationSource, /const featuredUprightEmojiShapes = getHolidayEmojiShapes\([\s\S]*?featuredEmojiColor,[\s\S]*?featuredEmojiFontFamily,[\s\S]*?\)/);
+  assert.match(holidayCelebrationSource, /const uprightEmojiParticleCount = emojiShapeWeight > 0[\s\S]*?emojiParticleCount - featuredUprightParticleCount - movingEmojiParticleCount/);
+  const uprightLaunchSource = holidayCelebrationSource.match(/if \(uprightEmojiShapes\.length[\s\S]*?\n  \}/)?.[0] || "";
+  assert.match(uprightLaunchSource, /flat: true/);
+  assert.match(uprightLaunchSource, /gravity: profile\.gravity/);
+  assert.match(uprightLaunchSource, /particleCount: uprightEmojiParticleCount/);
+  assert.match(uprightLaunchSource, /spread: profile\.spread/);
+  assert.match(uprightLaunchSource, /startVelocity: profile\.startVelocity/);
+  assert.match(uprightLaunchSource, /ticks: emojiTicks/);
+  const featuredLaunchSource = holidayCelebrationSource.match(/if \(featuredUprightEmojiShapes\.length[\s\S]*?\n  \}/)?.[0] || "";
+  assert.match(featuredLaunchSource, /flat: true/);
+  assert.match(featuredLaunchSource, /scalar: featuredEmojiScalar/);
+  assert.match(featuredLaunchSource, /particleCount: featuredUprightParticleCount/);
+});
+
+test("元旦和春节按年份加入不旋转的可爱生肖主体", () => {
+  assert.match(contentSource, /import \{ getCuteZodiacEmoji \} from "\.\/shared\/zodiac\.js"/);
+  assert.match(contentSource, /function createHolidayEmojiPool\(weightedEmoji\)/);
+  assert.match(contentSource, /zodiacWeight: 6/);
+  assert.match(contentSource, /emoji: createHolidayEmojiPool\(\[\["🎉", 10\], \["🎊", 10\], \["✨", 6\]\]\)/);
+  assert.match(contentSource, /uprightEmoji: createHolidayEmojiPool\(\[\["🥳", 6\], \["🎆", 3\], \["🎇", 3\], \["🥂", 10\]\]\)/);
+  assert.match(contentSource, /yearLabelWeight: 6/);
+  assert.match(contentSource, /emoji: createHolidayEmojiPool\(\[\["🎊", 4\], \["✨", 4\]\]\)/);
+  assert.match(contentSource, /uprightEmoji: createHolidayEmojiPool\(\[\["🧧", 4\], \["🏮", 5\], \["🧨", 3\], \["🥟", 3\], \["🍊", 4\]\]\)/);
+  assert.match(contentSource, /zodiacYearLabelWeight: 3/);
+  assert.match(contentSource, /message: "🧧 新年快乐"/);
+  assert.match(contentSource, /comboMessages: \[[\s\S]*?"🧧 新年快乐",[\s\S]*?"🧨 希望新的一年闲有所趣",[\s\S]*?"🧧 新岁胜旧岁，开心多一点，烦恼少一点",[\s\S]*?\]/);
+  assert.match(contentSource, /comboMessageTemplates: \[[\s\S]*?"✨ Happy new year！",[\s\S]*?"🌅 希望你\{year\}心情也是靓靓的！",[\s\S]*?"🥂 希望今年的你，也是自由快乐的",[\s\S]*?"🥳 希望新的一年，你的 Se 也有进步",[\s\S]*?\]/);
+  assert.match(contentSource, /function withHolidayZodiac\(theme, date\)/);
+  assert.doesNotMatch(contentSource, /function toKeycapNumber\(value\)/);
+  assert.match(contentSource, /const year = date\.getFullYear\(\)/);
+  assert.match(contentSource, /const zodiacEmoji = getCuteZodiacEmoji\(year\)/);
+  assert.match(contentSource, /Array\.from\(\{ length: theme\.zodiacWeight \|\| 0 \}, \(\) => zodiacEmoji\)/);
+  assert.match(contentSource, /Array\.from\(\{ length: theme\.yearLabelWeight \|\| 0 \}, \(\) => `✨\$\{year\}✨`\)/);
+  assert.match(contentSource, /Array\.from\(\{ length: theme\.zodiacYearLabelWeight \|\| 0 \}, \(\) => `\$\{zodiacEmoji\} \$\{year\} \$\{zodiacEmoji\}`\)/);
+  assert.match(contentSource, /const NEW_YEAR_ACCENT_COLOR = "#9575e6"/);
+  assert.match(contentSource, /featuredEmojiColor: NEW_YEAR_ACCENT_COLOR/);
+  assert.match(contentSource, /messageColor: NEW_YEAR_ACCENT_COLOR/);
+  assert.match(contentSource, /featuredEmojiFontFamily: CELEBRATION_YEAR_FONT_FAMILY/);
+  assert.match(contentSource, /new FontFace\([\s\S]*?CELEBRATION_YEAR_FONT_NAME,[\s\S]*?`url\(\$\{celebrationYearFontUrl\}\)`/);
+  assert.match(contentSource, /template\.replaceAll\("\{year\}", String\(year\)\)/);
+  assert.match(contentSource, /uprightEmoji: \[\.\.\.\(theme\.uprightEmoji \|\| \[\]\), \.\.\.zodiacEmojiPool\]/);
+  assert.match(contentSource, /featuredUprightEmoji: \[\.\.\.\(theme\.featuredUprightEmoji \|\| \[\]\), \.\.\.yearLabelPool, \.\.\.zodiacYearLabelPool\]/);
+});
+
+test("节日辨识依赖 Emoji，不使用南瓜、兔子或灯笼 SVG 轮廓", () => {
+  assert.doesNotMatch(contentSource, /pumpkin: "M|rabbit: "M|lantern: "M/);
+});
+
+test("节日文案只在长按或十次连击时出现", () => {
+  const holidayCelebrationSource = contentSource.slice(
+    contentSource.indexOf("function triggerHolidayCelebration"),
+    contentSource.indexOf("function triggerFreezeDriedParticles"),
+  );
+  const celebrationRouterSource = contentSource.slice(
+    contentSource.indexOf("function triggerCelebration"),
+    contentSource.indexOf("function renderLoading"),
+  );
+  const comboCelebrationSource = contentSource.slice(
+    contentSource.indexOf("function triggerComboCelebration"),
+    contentSource.indexOf("function consumeClickEasterEggMessage"),
+  );
+
+  assert.match(holidayCelebrationSource, /showMessage = false/);
+  assert.match(holidayCelebrationSource, /if \(showMessage\) \{[\s\S]*showEasterEggMessage/);
+  assert.match(celebrationRouterSource, /showMessage: holdDuration >= CELEBRATION_SHAKE_THRESHOLD_MS/);
+  assert.match(comboCelebrationSource, /combo: true,[\s\S]*showMessage: true/);
+});
+
+test("节日模式继承普通模式的粒子动力参数，只替换主题元素", () => {
+  const holidayCelebrationSource = contentSource.slice(
+    contentSource.indexOf("function triggerHolidayCelebration"),
+    contentSource.indexOf("function triggerFreezeDriedParticles"),
+  );
+
+  for (const property of ["decay", "gravity", "spread", "startVelocity", "ticks"]) {
+    assert.match(holidayCelebrationSource, new RegExp(`${property}: profile\\.${property}`));
+  }
+  assert.match(holidayCelebrationSource, /scalar: profile\.scalar/);
+  assert.match(holidayCelebrationSource, /const normalAccessoryCount = Math\.round\(8 \+ profile\.charge \* 8\)/);
+  assert.match(holidayCelebrationSource, /const baselineParticleCount = profile\.particleCount \+ normalAccessoryCount/);
+  assert.match(holidayCelebrationSource, /const extraParticleCount = Math\.round\(baselineParticleCount \* theme\.extraParticleRatio\)/);
+  assert.doesNotMatch(holidayCelebrationSource, /gravity: theme\.gravity|spread: theme\.spread|startVelocity: theme\.startVelocity|ticks: theme\.ticks/);
+});
+
 test("VIP 彩蛋支持十秒十次点击，长按复用普通蓄力彩带", () => {
   assert.match(contentSource, /const CELEBRATION_CLICK_LIMIT = 10/);
   assert.match(contentSource, /const CELEBRATION_CLICK_WINDOW_MS = 10_000/);
@@ -153,7 +376,7 @@ test("VIP 彩蛋支持十秒十次点击，长按复用普通蓄力彩带", () =
   assert.match(contentSource, /function getNextComboTheme/);
   assert.match(contentSource, /comboThemeIndex = \(comboThemeIndex \+ 1\) % COMBO_CELEBRATION_THEMES\.length/);
   assert.match(contentSource, /const \{ colors, shapes \} = getNextComboTheme\(\)/);
-  assert.doesNotMatch(contentSource, /♥|getHeartShape|heartShapes|shapeFromText|triggerHeartCelebration|HEART_CELEBRATION_COLORS|COMBO_CELEBRATION_COLORS/);
+  assert.doesNotMatch(contentSource, /♥|getHeartShape|heartShapes|triggerHeartCelebration|HEART_CELEBRATION_COLORS|COMBO_CELEBRATION_COLORS/);
   assert.match(contentSource, /color = "#ef5b8b"/);
   assert.doesNotMatch(contentSource, /#ff79a8|celebration-heart-pop/);
   assert.match(contentSource, /const CLICK_EASTER_EGG_MESSAGES = \[[\s\S]*"🧩 \{name\}~"[\s\S]*"希望看到这里的时候，你今天心情不错。🎉"[\s\S]*"希望你正在过一个普通但舒服的下午。"[\s\S]*"希望你今天能看到好看的夕阳🌇和月亮🌙"[\s\S]*"随时 feedback 我，if needs"[\s\S]*\]/);
@@ -167,7 +390,8 @@ test("VIP 彩蛋支持十秒十次点击，长按复用普通蓄力彩带", () =
   assert.match(contentSource, /message\.textContent = text/);
   assert.match(contentSource, /function consumeClickEasterEggMessage/);
   assert.match(contentSource, /clickEasterEggMessageIndex = \(clickEasterEggMessageIndex \+ 1\) % CLICK_EASTER_EGG_MESSAGES\.length/);
-  assert.match(contentSource, /triggerComboCelebration\(button, \{ messageText: consumeClickEasterEggMessage\(\) \}\)/);
+  assert.match(contentSource, /triggerComboCelebration\(button\)/);
+  assert.match(contentSource, /showEasterEggMessage\(button, \{ text: consumeClickEasterEggMessage\(\) \}\)/);
   assert.match(contentSource, /const comboTransparencyTimers = new WeakMap\(\)/);
   assert.match(contentSource, /function activateComboTransparency/);
   assert.match(contentSource, /card\.classList\.add\("is-combo-celebrating"\)/);
