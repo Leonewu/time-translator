@@ -39,6 +39,9 @@ function createHolidayEmojiPool(weightedEmoji) {
 
 const HOLIDAY_THEMES = {
   "new-year": {
+    buttonEmoji: "✨{year}✨",
+    buttonEmojiClass: "year",
+    buttonLabel: "新年顺意！",
     colors: ["#c9363e", "#e55745", "#f4b83f", "#ffe29a"],
     emoji: createHolidayEmojiPool([["🎉", 10], ["🎊", 10], ["✨", 6]]),
     uprightEmoji: createHolidayEmojiPool([["🥳", 6], ["🎆", 3], ["🎇", 3], ["🥂", 10]]),
@@ -65,6 +68,7 @@ const HOLIDAY_THEMES = {
     messageColor: NEW_YEAR_ACCENT_COLOR,
   },
   halloween: {
+    buttonEmoji: "🎃",
     colors: ["#f47721", "#ffad32", "#6c3aa8", "#24152f"],
     emoji: ["🦇", "🍬", "🍭"],
     uprightEmoji: ["🎃", "🎃", "👻", "🧙‍♀️", "🧛"],
@@ -82,6 +86,7 @@ const HOLIDAY_THEMES = {
     messageColor: "#d86112",
   },
   christmas: {
+    buttonEmoji: "🎄",
     colors: ["#c84d59", "#e7b652", "#f8ead2", "#d6eaf0"],
     emoji: ["❄️", "❄️", "❄️", "❄️", "🎁", "🍭", "☃️", "🍬"],
     uprightEmoji: ["🎄", "🎄", "🍎", "🔔", "🦌"],
@@ -102,6 +107,8 @@ const HOLIDAY_THEMES = {
     messageColor: "#b6404a",
   },
   "mid-autumn": {
+    buttonEmoji: "🌕",
+    buttonLabel: "花好月圆！",
     colors: ["#d9aa3e", "#f4da88", "#8baa9b", "#f5edda"],
     // This pool uses two entries as one weight unit so the moon can sit at 1.5.
     emoji: ["✨", "✨", "✨", "✨"],
@@ -124,6 +131,8 @@ const HOLIDAY_THEMES = {
     messageColor: "#9a7013",
   },
   "spring-festival": {
+    buttonEmoji: "🧧",
+    buttonLabel: "恭喜发财！",
     colors: ["#bd2734", "#e34b3f", "#f0a72f", "#ffe08a"],
     emoji: createHolidayEmojiPool([["🎊", 4], ["✨", 4]]),
     uprightEmoji: createHolidayEmojiPool([["🧧", 4], ["🏮", 5], ["🧨", 3], ["🥟", 3], ["🍊", 4]]),
@@ -531,6 +540,8 @@ function tooltipStyles() {
     .celebrate.is-charging { background: #fff5d9; box-shadow: 0 0 0 2px rgba(255, 189, 50, .14); color: #7d5300; transform: scale(1.04) rotate(-1.4deg); }
     .celebrate.is-charging-shake { animation: celebrate-charge-wiggle .4s ease-in-out infinite; }
     .celebrate-icon { height: 10px; width: 10px; }
+    .celebrate-emoji { display: inline-block; font-size: 10px; line-height: 1; }
+    .celebrate-emoji.year { color: #9575e6; font-family: ${CELEBRATION_YEAR_FONT_FAMILY}; font-size: 8px; font-weight: 800; letter-spacing: -.04em; }
     .celebrate.is-celebrated { animation: celebrate-pop .48s cubic-bezier(.2, .9, .25, 1.25); background: #fff5d9; box-shadow: 0 0 0 2px rgba(255, 189, 50, .18); color: #7d5300; }
     .celebration-layer { inset: -22px; overflow: visible; pointer-events: none; position: absolute; z-index: 3; }
     .celebration-canvas { display: block; height: 100%; left: 0; pointer-events: none; position: absolute; top: 0; width: 100%; }
@@ -568,6 +579,19 @@ function icon(name) {
     report: '<span class="report-emoji" aria-hidden="true">💢</span>',
   };
   return icons[name] || "";
+}
+
+function celebrationButtonIcon() {
+  const theme = getHolidayTheme();
+  const emoji = theme?.buttonEmoji;
+  const className = theme?.buttonEmojiClass === "year" ? "celebrate-emoji year" : "celebrate-emoji";
+  return emoji
+    ? `<span class="${className}" aria-hidden="true">${escapeHtml(emoji)}</span>`
+    : icon("spark");
+}
+
+function celebrationButtonLabel() {
+  return getHolidayTheme()?.buttonLabel || "接案順心!";
 }
 
 function getCelebrationProfile(holdDuration = 0) {
@@ -734,6 +758,30 @@ function getChineseCalendarDate(date) {
   }
 }
 
+function getLocalDateAtDayOffset(date, dayOffset) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate() + dayOffset, 12);
+}
+
+function isOnOrAfterLocalTime(date, hour, minute = 0) {
+  return date.getHours() > hour || (date.getHours() === hour && date.getMinutes() >= minute);
+}
+
+function getHolidayDateInWindow(date, isHolidayDate, leadStartHour, leadStartMinute = 0) {
+  if (isHolidayDate(date)) return date;
+  if (!isOnOrAfterLocalTime(date, leadStartHour, leadStartMinute)) return null;
+  const nextDate = getLocalDateAtDayOffset(date, 1);
+  return isHolidayDate(nextDate) ? nextDate : null;
+}
+
+function isFixedHolidayDate(date, month, day) {
+  return date.getMonth() + 1 === month && date.getDate() === day;
+}
+
+function isChineseCalendarDate(date, month, day) {
+  const lunarDate = getChineseCalendarDate(date);
+  return lunarDate?.month === month && lunarDate.day === day;
+}
+
 function withHolidayZodiac(theme, date) {
   if (!theme?.zodiacWeight && !theme?.yearLabelWeight && !theme?.zodiacYearLabelWeight) return theme;
   const year = date.getFullYear();
@@ -749,6 +797,7 @@ function withHolidayZodiac(theme, date) {
   const comboMessages = theme.comboMessageTemplates?.map((template) => template.replaceAll("{year}", String(year)));
   return {
     ...theme,
+    buttonEmoji: theme.buttonEmoji?.replaceAll("{year}", String(year)),
     uprightEmoji: [...(theme.uprightEmoji || []), ...zodiacEmojiPool],
     featuredUprightEmoji: [...(theme.featuredUprightEmoji || []), ...yearLabelPool, ...zodiacYearLabelPool],
     ...(comboMessages ? { comboMessages } : {}),
@@ -759,15 +808,15 @@ function getHolidayTheme(date = new Date()) {
   const previewKey = getHolidayPreviewKey();
   if (previewKey) return withHolidayZodiac(HOLIDAY_THEMES[previewKey], date);
 
-  const month = date.getMonth() + 1;
-  const day = date.getDate();
-  if (month === 1 && day === 1) return withHolidayZodiac(HOLIDAY_THEMES["new-year"], date);
-  if (month === 10 && day === 31) return withHolidayZodiac(HOLIDAY_THEMES.halloween, date);
-  if (month === 12 && day === 25) return withHolidayZodiac(HOLIDAY_THEMES.christmas, date);
+  const newYearDate = getHolidayDateInWindow(date, (candidate) => isFixedHolidayDate(candidate, 1, 1), 21);
+  if (newYearDate) return withHolidayZodiac(HOLIDAY_THEMES["new-year"], newYearDate);
+  if (isFixedHolidayDate(date, 10, 31)) return withHolidayZodiac(HOLIDAY_THEMES.halloween, date);
+  if (isFixedHolidayDate(date, 12, 25)) return withHolidayZodiac(HOLIDAY_THEMES.christmas, date);
 
-  const lunarDate = getChineseCalendarDate(date);
-  if (lunarDate?.month === 1 && lunarDate.day === 1) return withHolidayZodiac(HOLIDAY_THEMES["spring-festival"], date);
-  if (lunarDate?.month === 8 && lunarDate.day === 15) return withHolidayZodiac(HOLIDAY_THEMES["mid-autumn"], date);
+  const springFestivalDate = getHolidayDateInWindow(date, (candidate) => isChineseCalendarDate(candidate, 1, 1), 9);
+  if (springFestivalDate) return withHolidayZodiac(HOLIDAY_THEMES["spring-festival"], springFestivalDate);
+  const midAutumnDate = getHolidayDateInWindow(date, (candidate) => isChineseCalendarDate(candidate, 8, 15), 22);
+  if (midAutumnDate) return withHolidayZodiac(HOLIDAY_THEMES["mid-autumn"], midAutumnDate);
   return null;
 }
 
@@ -1148,7 +1197,8 @@ function renderResult(result, text, rect) {
     const buttonClass = `report${reported ? " reported" : failed ? " failed" : ""}`;
     return `<button class="${buttonClass}" aria-label="${label}" title="${label}" data-action="report"${sending ? " disabled aria-busy=\"true\"" : ""}>${icon(reported ? "check" : "report")}</button>`;
   };
-  const celebrateAction = `<button type="button" class="celebrate" aria-label="接案順心!" title="接案順心!" data-action="celebrate">${icon("spark")}<span>接案順心!</span></button>`;
+  const celebrateLabel = celebrationButtonLabel();
+  const celebrateAction = `<button type="button" class="celebrate" aria-label="${celebrateLabel}" title="${celebrateLabel}" data-action="celebrate">${celebrationButtonIcon()}<span>${celebrateLabel}</span></button>`;
   if (!result?.ok) {
     host.shadowRoot.innerHTML = `<style>${tooltipStyles()}</style>
       <div class="card">

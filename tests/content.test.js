@@ -94,18 +94,18 @@ test("成功和失败 Tooltip 都提供手动重新解析按钮", () => {
   assert.match(contentSource, /renderAndParse\(\{ text: retryText, rect: retryRect, referenceContext: currentReferenceContext \}, true\)/);
 });
 
-test("失败 Tooltip 也提供接案順心!按钮和彩纸层", () => {
+test("失败 Tooltip 也提供庆祝按钮和彩纸层", () => {
   assert.match(contentSource, /if \(!result\?\.ok\) \{[\s\S]*<div class="celebration-layer" aria-hidden="true"><\/div>[\s\S]*\$\{celebrateAction\}[\s\S]*data-action="refresh"/);
   assert.match(contentSource, /if \(!result\?\.ok\) \{[\s\S]*placeHost\(rect\);[\s\S]*bindCelebrationButton\(host\);[\s\S]*return;/);
   assert.match(contentSource, /function bindCelebrationButton/);
 });
 
-test("成功转换后的 Tooltip 提供接案順心!按钮和 Canvas 蓄力彩纸效果", () => {
+test("成功转换后的 Tooltip 提供节日化按钮和 Canvas 蓄力彩纸效果", () => {
   assert.match(contentSource, /import \{ getAnonymousInstallId, getInstallId \} from "\.\/shared\/install-id\.js"/);
   assert.match(contentSource, /getAnonymousInstallId\(\)/);
   assert.match(contentSource, /const celebrateAction = `<button/);
   assert.match(contentSource, /data-action="celebrate"/);
-  assert.match(contentSource, /<span>接案順心!<\/span>/);
+  assert.match(contentSource, /<span>\$\{celebrateLabel\}<\/span>/);
   assert.match(contentSource, /<div class="card">[\s\S]*<div class="celebration-layer" aria-hidden="true"><\/div>[\s\S]*data-action="celebrate"/);
   assert.match(contentSource, /function triggerCelebration/);
   assert.match(contentSource, /function getCelebrationProfile/);
@@ -159,6 +159,30 @@ test("成功转换后的 Tooltip 提供接案順心!按钮和 Canvas 蓄力彩�
   assert.doesNotMatch(contentSource, /lastCelebrateAt|celebratedAt|celebrationDebug|TT-celebrate/);
   assert.match(contentSource, /action === "celebrate"/);
   assert.doesNotMatch(contentSource, /vipEnabled|isVipInstallId/);
+});
+
+test("接案順心按钮的图标和文案随节日模式切换，普通模式保留默认值", () => {
+  assert.match(contentSource, /"new-year": \{[\s\S]*?buttonEmoji: "✨\{year\}✨"[\s\S]*?buttonEmojiClass: "year"[\s\S]*?buttonLabel: "新年顺意！"/);
+  assert.match(contentSource, /halloween: \{[\s\S]*?buttonEmoji: "🎃"/);
+  assert.match(contentSource, /christmas: \{[\s\S]*?buttonEmoji: "🎄"/);
+  assert.match(contentSource, /"mid-autumn": \{[\s\S]*?buttonEmoji: "🌕"[\s\S]*?buttonLabel: "花好月圆！"/);
+  assert.match(contentSource, /"spring-festival": \{[\s\S]*?buttonEmoji: "🧧"[\s\S]*?buttonLabel: "恭喜发财！"/);
+  assert.match(contentSource, /buttonEmoji: theme\.buttonEmoji\?\.replaceAll\("\{year\}", String\(year\)\)/);
+  assert.match(contentSource, /function celebrationButtonIcon\(\) \{[\s\S]*?const theme = getHolidayTheme\(\)[\s\S]*?theme\?\.buttonEmoji[\s\S]*?: icon\("spark"\)/);
+  assert.match(contentSource, /function celebrationButtonLabel\(\) \{[\s\S]*?getHolidayTheme\(\)\?\.buttonLabel \|\| "接案順心!"/);
+  assert.match(contentSource, /const celebrateLabel = celebrationButtonLabel\(\)/);
+  assert.match(contentSource, /data-action="celebrate">\$\{celebrationButtonIcon\(\)\}<span>\$\{celebrateLabel\}<\/span>/);
+});
+
+test("元旦、中秋和春节会按本地时间提前进入节日模式", () => {
+  assert.match(contentSource, /function getHolidayDateInWindow\(date, isHolidayDate, leadStartHour, leadStartMinute = 0\)/);
+  assert.match(contentSource, /const nextDate = getLocalDateAtDayOffset\(date, 1\)/);
+  assert.match(contentSource, /getHolidayDateInWindow\(date, \(candidate\) => isFixedHolidayDate\(candidate, 1, 1\), 21\)/);
+  assert.match(contentSource, /getHolidayDateInWindow\(date, \(candidate\) => isChineseCalendarDate\(candidate, 1, 1\), 9\)/);
+  assert.match(contentSource, /getHolidayDateInWindow\(date, \(candidate\) => isChineseCalendarDate\(candidate, 8, 15\), 22\)/);
+  assert.match(contentSource, /withHolidayZodiac\(HOLIDAY_THEMES\["new-year"\], newYearDate\)/);
+  assert.match(contentSource, /withHolidayZodiac\(HOLIDAY_THEMES\["spring-festival"\], springFestivalDate\)/);
+  assert.match(contentSource, /withHolidayZodiac\(HOLIDAY_THEMES\["mid-autumn"\], midAutumnDate\)/);
 });
 
 test("普通模式和节日模式使用互斥的彩带与文案", () => {
