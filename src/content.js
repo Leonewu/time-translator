@@ -87,6 +87,7 @@ const HOLIDAY_THEMES = {
   },
   christmas: {
     buttonEmoji: "🎄",
+    buttonLabel: "圣诞快乐!",
     colors: ["#c84d59", "#e7b652", "#f8ead2", "#d6eaf0"],
     emoji: ["❄️", "❄️", "❄️", "❄️", "🎁", "🍭", "☃️", "🍬"],
     uprightEmoji: ["🎄", "🎄", "🍎", "🔔", "🦌"],
@@ -189,6 +190,7 @@ const comboTransparencyTimers = new WeakMap();
 const comboShapes = new Map();
 const holidayEmojiShapes = new Map();
 const holidayComboMessageIndices = new Map();
+const previewHolidayAutoCelebrations = new Set();
 let celebrationYearFontLoaded = false;
 let clickEasterEggMessageIndex = 0;
 let comboThemeIndex = 0;
@@ -804,19 +806,30 @@ function withHolidayZodiac(theme, date) {
   };
 }
 
+function formatHolidayDateKey(date) {
+  if (!(date instanceof Date) || !Number.isFinite(date.getTime())) return "";
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function withHolidayOccurrence(themeKey, date) {
+  const theme = withHolidayZodiac(HOLIDAY_THEMES[themeKey], date);
+  const dateKey = formatHolidayDateKey(date);
+  return dateKey ? { ...theme, holidayAutoCelebrationKey: `${themeKey}:${dateKey}` } : theme;
+}
+
 function getHolidayTheme(date = new Date()) {
   const previewKey = getHolidayPreviewKey();
-  if (previewKey) return withHolidayZodiac(HOLIDAY_THEMES[previewKey], date);
+  if (previewKey) return withHolidayOccurrence(previewKey, date);
 
   const newYearDate = getHolidayDateInWindow(date, (candidate) => isFixedHolidayDate(candidate, 1, 1), 21);
-  if (newYearDate) return withHolidayZodiac(HOLIDAY_THEMES["new-year"], newYearDate);
-  if (isFixedHolidayDate(date, 10, 31)) return withHolidayZodiac(HOLIDAY_THEMES.halloween, date);
-  if (isFixedHolidayDate(date, 12, 25)) return withHolidayZodiac(HOLIDAY_THEMES.christmas, date);
+  if (newYearDate) return withHolidayOccurrence("new-year", newYearDate);
+  if (isFixedHolidayDate(date, 10, 31)) return withHolidayOccurrence("halloween", date);
+  if (isFixedHolidayDate(date, 12, 25)) return withHolidayOccurrence("christmas", date);
 
   const springFestivalDate = getHolidayDateInWindow(date, (candidate) => isChineseCalendarDate(candidate, 1, 1), 9);
-  if (springFestivalDate) return withHolidayZodiac(HOLIDAY_THEMES["spring-festival"], springFestivalDate);
+  if (springFestivalDate) return withHolidayOccurrence("spring-festival", springFestivalDate);
   const midAutumnDate = getHolidayDateInWindow(date, (candidate) => isChineseCalendarDate(candidate, 8, 15), 22);
-  if (midAutumnDate) return withHolidayZodiac(HOLIDAY_THEMES["mid-autumn"], midAutumnDate);
+  if (midAutumnDate) return withHolidayOccurrence("mid-autumn", midAutumnDate);
   return null;
 }
 
@@ -1341,6 +1354,16 @@ function bindCelebrationButton(host) {
   celebrateButton.addEventListener("click", celebrate);
 }
 
+function getRenderedCelebrationButton() {
+  return tooltipHost?.shadowRoot?.querySelector('[data-action="celebrate"]') || null;
+}
+
+function claimPreviewHolidayAutoCelebration(holidayKey) {
+  if (!holidayKey || previewHolidayAutoCelebrations.has(holidayKey)) return false;
+  previewHolidayAutoCelebrations.add(holidayKey);
+  return true;
+}
+
 function formatSourceZone(result) {
   const name = String(result?.sourceTimeZoneName || "").trim();
   const zone = String(result?.sourceTimeZone || "").trim();
@@ -1369,6 +1392,21 @@ function renderAndParse(info, force = false) {
   renderLoading(info.text, info.rect);
   sendRuntimeMessage({ type: "PARSE_TEXT", text: info.text, referenceContext: currentReferenceContext }, (result, runtimeError) => {
     if (requestId !== requestSequence) return;
+    const celebrateFirstAutomaticHolidayTooltip = () => {
+      if (force || !autoConvert) return;
+      const holidayKey = getHolidayTheme()?.holidayAutoCelebrationKey;
+      if (!holidayKey) return;
+      const celebrateIfClaimed = (claim) => {
+        if (requestId !== requestSequence || currentText !== info.text) return;
+        const celebrateButton = getRenderedCelebrationButton();
+        if (claim?.ok && claim.claimed && celebrateButton) triggerCelebration(celebrateButton, 0);
+      };
+      if (isHolidayPreviewPage()) {
+        celebrateIfClaimed({ ok: true, claimed: claimPreviewHolidayAutoCelebration(holidayKey) });
+      } else {
+        sendRuntimeMessage({ type: "CLAIM_HOLIDAY_AUTO_CELEBRATION", holidayKey }, celebrateIfClaimed);
+      }
+    };
     if (runtimeError || !result?.ok) {
       renderResult(
         {
@@ -1378,9 +1416,11 @@ function renderAndParse(info, force = false) {
         info.text,
         info.rect,
       );
+      celebrateFirstAutomaticHolidayTooltip();
       return;
     }
     renderResult(result, info.text, info.rect);
+    celebrateFirstAutomaticHolidayTooltip();
   });
 }
 

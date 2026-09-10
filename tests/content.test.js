@@ -164,7 +164,7 @@ test("成功转换后的 Tooltip 提供节日化按钮和 Canvas 蓄力彩纸效
 test("接案順心按钮的图标和文案随节日模式切换，普通模式保留默认值", () => {
   assert.match(contentSource, /"new-year": \{[\s\S]*?buttonEmoji: "✨\{year\}✨"[\s\S]*?buttonEmojiClass: "year"[\s\S]*?buttonLabel: "新年顺意！"/);
   assert.match(contentSource, /halloween: \{[\s\S]*?buttonEmoji: "🎃"/);
-  assert.match(contentSource, /christmas: \{[\s\S]*?buttonEmoji: "🎄"/);
+  assert.match(contentSource, /christmas: \{[\s\S]*?buttonEmoji: "🎄"[\s\S]*?buttonLabel: "圣诞快乐!"/);
   assert.match(contentSource, /"mid-autumn": \{[\s\S]*?buttonEmoji: "🌕"[\s\S]*?buttonLabel: "花好月圆！"/);
   assert.match(contentSource, /"spring-festival": \{[\s\S]*?buttonEmoji: "🧧"[\s\S]*?buttonLabel: "恭喜发财！"/);
   assert.match(contentSource, /buttonEmoji: theme\.buttonEmoji\?\.replaceAll\("\{year\}", String\(year\)\)/);
@@ -180,9 +180,30 @@ test("元旦、中秋和春节会按本地时间提前进入节日模式", () =>
   assert.match(contentSource, /getHolidayDateInWindow\(date, \(candidate\) => isFixedHolidayDate\(candidate, 1, 1\), 21\)/);
   assert.match(contentSource, /getHolidayDateInWindow\(date, \(candidate\) => isChineseCalendarDate\(candidate, 1, 1\), 9\)/);
   assert.match(contentSource, /getHolidayDateInWindow\(date, \(candidate\) => isChineseCalendarDate\(candidate, 8, 15\), 22\)/);
-  assert.match(contentSource, /withHolidayZodiac\(HOLIDAY_THEMES\["new-year"\], newYearDate\)/);
-  assert.match(contentSource, /withHolidayZodiac\(HOLIDAY_THEMES\["spring-festival"\], springFestivalDate\)/);
-  assert.match(contentSource, /withHolidayZodiac\(HOLIDAY_THEMES\["mid-autumn"\], midAutumnDate\)/);
+  assert.match(contentSource, /withHolidayOccurrence\("new-year", newYearDate\)/);
+  assert.match(contentSource, /withHolidayOccurrence\("spring-festival", springFestivalDate\)/);
+  assert.match(contentSource, /withHolidayOccurrence\("mid-autumn", midAutumnDate\)/);
+});
+
+test("节日首次自动 Tooltip 后才申请一次自动彩蛋，预览不写入正式记录", () => {
+  assert.match(contentSource, /function formatHolidayDateKey\(date\)/);
+  assert.match(contentSource, /holidayAutoCelebrationKey: `\$\{themeKey\}:\$\{dateKey\}`/);
+  assert.match(contentSource, /const previewHolidayAutoCelebrations = new Set\(\)/);
+  assert.match(contentSource, /function claimPreviewHolidayAutoCelebration\(holidayKey\)/);
+  assert.match(contentSource, /if \(force \|\| !autoConvert\) return;/);
+  assert.match(contentSource, /type: "CLAIM_HOLIDAY_AUTO_CELEBRATION", holidayKey/);
+  assert.match(contentSource, /const celebrateButton = getRenderedCelebrationButton\(\)/);
+  assert.match(contentSource, /claim\?\.ok && claim\.claimed && celebrateButton/);
+  assert.match(contentSource, /if \(isHolidayPreviewPage\(\)\) \{[\s\S]*claimPreviewHolidayAutoCelebration\(holidayKey\)[\s\S]*\} else \{[\s\S]*CLAIM_HOLIDAY_AUTO_CELEBRATION/);
+});
+
+test("没有 API Key 时，失败 Tooltip 也会触发首次节日彩蛋", () => {
+  const renderBlock = contentSource.slice(
+    contentSource.indexOf("function renderAndParse"),
+    contentSource.indexOf("document.addEventListener(\"pointerdown\""),
+  );
+  assert.match(renderBlock, /if \(runtimeError \|\| !result\?\.ok\) \{[\s\S]*renderResult\([\s\S]*celebrateFirstAutomaticHolidayTooltip\(\)[\s\S]*return;/);
+  assert.match(renderBlock, /renderResult\(result, info\.text, info\.rect\);\s*celebrateFirstAutomaticHolidayTooltip\(\);/);
 });
 
 test("普通模式和节日模式使用互斥的彩带与文案", () => {

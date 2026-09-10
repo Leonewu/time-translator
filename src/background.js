@@ -17,6 +17,29 @@ const VIP_ACTION_ICON = {
   16: "src/assets/vip-a2-16.png",
   32: "src/assets/vip-a2-32.png",
 };
+const HOLIDAY_AUTO_CELEBRATION_STORAGE_PREFIX = "holiday-auto-celebration:";
+const claimedHolidayAutoCelebrations = new Set();
+
+async function claimHolidayAutoCelebration(holidayKey) {
+  const normalizedKey = String(holidayKey || "").trim();
+  if (!/^(new-year|halloween|christmas|mid-autumn|spring-festival):\d{4}-\d{2}-\d{2}$/.test(normalizedKey)) {
+    return { ok: false, claimed: false };
+  }
+
+  const storageKey = `${HOLIDAY_AUTO_CELEBRATION_STORAGE_PREFIX}${normalizedKey}`;
+  if (claimedHolidayAutoCelebrations.has(storageKey)) return { ok: true, claimed: false };
+  claimedHolidayAutoCelebrations.add(storageKey);
+  try {
+    const stored = await chrome.storage.local.get(storageKey);
+    if (stored?.[storageKey]) return { ok: true, claimed: false };
+    await chrome.storage.local.set({ [storageKey]: { triggeredAt: Date.now() } });
+    return { ok: true, claimed: true };
+  } catch (error) {
+    claimedHolidayAutoCelebrations.delete(storageKey);
+    console.warn("Time Translator: unable to claim holiday celebration", error);
+    return { ok: false, claimed: false };
+  }
+}
 
 async function updateActionIcon(value) {
   if (!chrome.action?.setIcon) return;
@@ -175,6 +198,11 @@ chrome.commands.onCommand.addListener(async (command) => {
 });
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (message.type === "CLAIM_HOLIDAY_AUTO_CELEBRATION") {
+    claimHolidayAutoCelebration(message.holidayKey).then(sendResponse);
+    return true;
+  }
+
   if (message.type === "REPORT_CASE") {
     (async () => {
       const payload = buildReportPayload({
