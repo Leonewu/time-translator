@@ -161,6 +161,12 @@ test("成功转换后的 Tooltip 提供节日化按钮和 Canvas 蓄力彩纸效
   assert.match(contentSource, /isVipInstallId\(magicCode\)/);
 });
 
+test("彩蛋 Canvas 位于 Tooltip 之上且不拦截操作", () => {
+  assert.match(contentSource, /tooltipHost\.style\.zIndex = "2147483647"/);
+  assert.match(contentSource, /pointerEvents: "none"/);
+  assert.match(contentSource, /zIndex: "2147483647"/);
+});
+
 test("接案順心按钮的图标和文案随节日模式切换，普通模式保留默认值", () => {
   assert.match(contentSource, /"new-year": \{[\s\S]*?buttonEmoji: "✨\{year\}✨"[\s\S]*?buttonEmojiClass: "year"[\s\S]*?buttonLabel: "新年顺意！"/);
   assert.match(contentSource, /halloween: \{[\s\S]*?buttonEmoji: "🎃"/);

@@ -619,7 +619,8 @@ function getConfettiInstance() {
     position: "fixed",
     top: "0",
     width: "100vw",
-    zIndex: "2147483646",
+    // Keep particles above the Tooltip while allowing all Tooltip controls to receive input.
+    zIndex: "2147483647",
   });
   if (!canvas.isConnected) document.documentElement.append(canvas);
   confettiCanvas = canvas;

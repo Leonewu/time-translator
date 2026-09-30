@@ -135,10 +135,10 @@ test("Popup 提供自定义关键词输入框", () => {
 test("Popup 提供反馈邮件入口和当前版本号", () => {
   assert.match(popupHtml, /mailto:reon\.hypr@gmail\.com\?subject=Time%20Translator%20Feedback/);
   assert.match(popupHtml, /data-i18n="feedback"/);
-  assert.match(popupHtml, /<footer>\s*<span>v0\.1\.24<\/span>\s*<a class="feedback-link"/);
-  assert.match(popupHtml, />v0\.1\.24<\/span>/);
+  assert.match(popupHtml, /<footer>\s*<span>v0\.1\.26<\/span>\s*<a class="feedback-link"/);
+  assert.match(popupHtml, />v0\.1\.26<\/span>/);
   assert.match(popupCss, /\.feedback-link \{[^}]*margin-left:\s*auto/);
-  assert.match(manifest, /"version": "0\.1\.24"/);
+  assert.match(manifest, /"version": "0\.1\.26"/);
 });
 
 test("Popup 不显示自动保存提示和 API Key 浏览器存储提示", () => {
@@ -152,8 +152,9 @@ test("Popup 显示可编辑 Magic Code 和 VIP 标识，但不提供复制按钮
   assert.match(popupHtml, /data-i18n="magicCodeLabel">Magic Code<\/span>/);
   assert.match(i18nSource, /magicCodeLabel: "Magic Code"/);
   assert.match(i18nSource, /magicCodeLabel: "魔法代码"/);
-  assert.match(i18nSource, /magicCodePlaceholder: "Your name"/);
-  assert.match(i18nSource, /magicCodePlaceholder: "你的名字"/);
+  assert.match(i18nSource, /magicCodePlaceholder: "Type a name to find an Easter egg"/);
+  assert.match(i18nSource, /magicCodePlaceholder: "输入名字，寻找彩蛋"/);
+  assert.match(popupHtml, /id="installIdValue"[^>]+placeholder="Type a name to find an Easter egg"/);
   assert.match(i18nSource, /magicCodeValid: "VIP code recognized"/);
   assert.match(i18nSource, /magicCodeValid: "已识别 VIP 代码"/);
   assert.doesNotMatch(i18nSource, /magicCodeNotRecognized|不是 VIP 代码/);
