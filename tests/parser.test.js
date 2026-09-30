@@ -18,6 +18,44 @@ test("解析 today before 3 pm UK", () => {
   assert.equal(result.displayText, "2026/08/20（周四）22:00 前");
 });
 
+test("英文模型结果跨日期范围不省略第二天，且缺省源时区明确标注", () => {
+  const result = parseStructuredTimeExpression({
+    status: "ok",
+    start_local: "2026-08-20T23:00:00",
+    end_local: "2026-08-21T09:00:00",
+    source_time_zone: "Europe/London",
+    source_time_zone_assumed: true,
+    relation: "between",
+    confidence: "high",
+    reason: "",
+    assumptions: [],
+  }, {
+    targetTimeZone: "America/New_York",
+    defaultSourceTimeZone: "Europe/London",
+    rawText: "between 11 pm and 9 am",
+    locale: "en",
+  });
+  assert.equal(result.displayText, "2026/08/20 (Thu) 18:00–2026/08/21 (Fri) 04:00");
+  assert.equal(result.sourceTimeZoneAssumed, true);
+  assert.match(result.assumptions.join(" "), /Assumed source timezone: Europe\/London/);
+});
+
+test("英文截止与之后关系词放在日期前，中文结果保持原格式", () => {
+  const extraction = {
+    status: "ok", start_local: "2026-08-20T15:00:00", end_local: null,
+    source_time_zone: "Europe/London", source_time_zone_assumed: false,
+    relation: "before", confidence: "high", reason: "", assumptions: [],
+  };
+  const options = { targetTimeZone: "America/New_York", rawText: "today 3 pm UK" };
+  for (const relation of ["before", "by", "after"]) {
+    assert.equal(
+      parseStructuredTimeExpression({ ...extraction, relation }, { ...options, locale: "en" }).displayText,
+      `${relation} 2026/08/20 (Thu) 10:00`,
+    );
+  }
+  assert.equal(parseStructuredTimeExpression(extraction, { ...options, locale: "zh" }).displayText, "2026/08/20（周四）10:00 前");
+});
+
 test("CET 按固定 UTC+1 处理，不受 LLM 返回的地区时区影响", () => {
   for (const returnedZone of ["Europe/Berlin", "Europe/London"]) {
     const result = parseStructuredTimeExpression(

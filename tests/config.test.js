@@ -14,6 +14,19 @@ test("面板主题默认跟随系统，并能持久化手动主题", () => {
   assert.equal(mergeSettings({ theme: "unknown" }).theme, "system");
 });
 
+test("新用户使用浏览器时区，已有上海或其他 IANA 时区设置不迁移", () => {
+  const local = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  assert.equal(mergeSettings().targetTimeZone, local);
+  assert.equal(mergeSettings({ targetTimeZone: "Asia/Shanghai" }).targetTimeZone, "Asia/Shanghai");
+  assert.equal(mergeSettings({ targetTimeZone: "Pacific/Auckland" }).targetTimeZone, "Pacific/Auckland");
+});
+
+test("服务商 Key 链接只在有明确官方入口的预设中出现", () => {
+  assert.match(PROVIDER_PRESETS.mimo.apiKeyUrl, /^https:\/\/platform\.xiaomimimo\.com\//);
+  assert.match(PROVIDER_PRESETS.deepseek.apiKeyUrl, /^https:\/\/platform\.deepseek\.com\//);
+  assert.equal(PROVIDER_PRESETS.custom.apiKeyUrl, undefined);
+});
+
 test("旧的自动弹出和 LLM 启用字段不会继续成为配置项", () => {
   const settings = mergeSettings({ enabled: false, showAutomatically: true, llm: { enabled: true } });
   assert.equal(settings.autoConvert, false);

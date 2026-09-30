@@ -7,6 +7,8 @@ const popupJs = await readFile(new URL("../src/popup.js", import.meta.url), "utf
 const popupCss = await readFile(new URL("../src/popup.css", import.meta.url), "utf8");
 const i18nSource = await readFile(new URL("../src/shared/i18n.js", import.meta.url), "utf8");
 const manifest = await readFile(new URL("../manifest.json", import.meta.url), "utf8");
+const enMessages = JSON.parse(await readFile(new URL("../_locales/en/messages.json", import.meta.url), "utf8"));
+const zhMessages = JSON.parse(await readFile(new URL("../_locales/zh_CN/messages.json", import.meta.url), "utf8"));
 
 test("Popup 提供插件总开关，不再提供独立保存按钮或自动弹出配置", () => {
   assert.match(popupHtml, /id="autoConvert"/);
@@ -159,7 +161,7 @@ test("Popup 显示可编辑 Magic Code 和 VIP 标识，但不提供复制按钮
   assert.match(popupHtml, /id="vipBadge"/);
   assert.match(popupHtml, /id="vipBadge"[^>]*aria-label="VIP"[^>]*>✨<\/span>/);
   assert.doesNotMatch(popupHtml, /id="copyInstallId"/);
-  assert.match(popupJs, /getAnonymousInstallId/);
+  assert.doesNotMatch(popupJs, /getAnonymousInstallId/);
   assert.match(popupJs, /getInstallId/);
   assert.match(popupJs, /setInstallId/);
   assert.match(popupJs, /isVipInstallId/);
@@ -211,12 +213,18 @@ test("Popup 和扩展 manifest 使用时区小云朵 logo", () => {
   assert.match(popupCss, /popup-shell::after[\s\S]*url\("\.\/assets\/time-cloud\.png"\)/);
 });
 
-test("产品名称统一为 Time Translator，商店名称补充功能关键词", () => {
+test("产品名称统一为 Time Translator，商店名称按浏览器语言显示", () => {
   assert.match(popupHtml, /<title data-i18n="popupTitle">Time Translator<\/title>/);
   assert.match(popupHtml, /TIME TRANSLATOR/);
   assert.match(popupHtml, /<h1 class="brand-title">Time Translator<\/h1>/);
   assert.doesNotMatch(popupHtml, /class="energy-mark"/);
-  assert.match(manifest, /"name": "Time Translator – Time Zone Converter"/);
+  assert.match(manifest, /"name": "__MSG_extensionName__"/);
+  assert.match(manifest, /"default_locale": "en"/);
+  for (const key of ["extensionName", "extensionDescription", "extensionTitle", "convertSelection"]) {
+    assert.match(enMessages[key]?.message || "", /\S/);
+    assert.match(zhMessages[key]?.message || "", /\S/);
+    assert.match(manifest, new RegExp(`__MSG_${key}__`));
+  }
 });
 
 test("在线测试嵌入模型连接区", () => {
@@ -235,5 +243,14 @@ test("Popup 支持按浏览器语言切换中英文，未知语言回退英文",
 
 test("品牌文案包含元气 100% 标识", () => {
   assert.match(i18nSource, /energyLine: "元气100%/);
-  assert.match(manifest, /元气100%的时区转换工具/);
+  assert.match(manifest, /"description": "__MSG_extensionDescription__"/);
+});
+
+test("Provider 链接随选项变化，自定义入口隐藏且不发送配置内容", () => {
+  assert.match(popupHtml, /id="providerKeyLink"[^>]*target="_blank"[^>]*rel="noopener noreferrer"/);
+  assert.match(popupJs, /providerKeyLink\.hidden = !preset\.apiKeyUrl/);
+  assert.match(popupJs, /providerKeyLink\.href = preset\.apiKeyUrl/);
+  assert.match(popupJs, /providerKeyLink\.addEventListener\("click", async \(event\) => \{\s*event\.preventDefault\(\);\s*await persistForm\(\);\s*await chrome\.tabs\.create\(\{ url: providerKeyLink\.href \}\)/);
+  assert.match(popupJs, /provider\.addEventListener\("change",[\s\S]*fillProviderFields\(\)/);
+  assert.match(popupJs, /targetSelect\.add\(new Option\(value\.targetTimeZone, value\.targetTimeZone\)\)/);
 });

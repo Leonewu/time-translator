@@ -14,6 +14,7 @@ import {
   resolveLocalDateTime,
 } from "./time.js";
 import { detectFixedTimeZoneAbbreviation } from "./source-zone.js";
+import { getMessage } from "./i18n.js";
 
 const WEEKDAY_NAMES = {
   sunday: 0,
@@ -278,18 +279,18 @@ function makeLocalDateTime(date, time) {
   return { ...date, ...time };
 }
 
-function displayForRelation(relation, instant, endInstant, targetTimeZone) {
+function displayForRelation(relation, instant, endInstant, targetTimeZone, locale = "zh") {
   if (relation === "between") {
     const start = getZonedDateParts(instant, targetTimeZone);
     const end = getZonedDateParts(endInstant, targetTimeZone);
     const sameDate = start.year === end.year && start.month === end.month && start.day === end.day;
     return sameDate
-      ? `${formatBeijingDateTime(instant, targetTimeZone)}–${formatClock(end)}`
-      : `${formatBeijingDateTime(instant, targetTimeZone)}–${formatBeijingDateTime(endInstant, targetTimeZone)}`;
+      ? `${formatBeijingDateTime(instant, targetTimeZone, locale)}–${formatClock(end)}`
+      : `${formatBeijingDateTime(instant, targetTimeZone, locale)}–${formatBeijingDateTime(endInstant, targetTimeZone, locale)}`;
   }
-  const value = formatBeijingDateTime(instant, targetTimeZone);
-  if (relation === "before" || relation === "by") return `${value} 前`;
-  if (relation === "after") return `${value} 之后`;
+  const value = formatBeijingDateTime(instant, targetTimeZone, locale);
+  if (relation === "before" || relation === "by") return locale === "en" ? `${relation} ${value}` : `${value} 前`;
+  if (relation === "after") return locale === "en" ? `after ${value}` : `${value} 之后`;
   return value;
 }
 
@@ -342,6 +343,7 @@ const NORMALIZED_RESULT_KEYS = new Set([
   "start_local",
   "end_local",
   "source_time_zone",
+  "source_time_zone_assumed",
   "relation",
   "confidence",
   "reason",
@@ -360,6 +362,7 @@ function hasValidNormalizedShape(extraction) {
       !Object.hasOwn(extraction, "reason") ||
       !Object.hasOwn(extraction, "assumptions")) return false;
   if (typeof extraction.source_time_zone !== "string" ||
+      (extraction.source_time_zone_assumed !== undefined && typeof extraction.source_time_zone_assumed !== "boolean") ||
       (extraction.start_local !== null && typeof extraction.start_local !== "string") ||
       (extraction.end_local !== null && typeof extraction.end_local !== "string") ||
       !["high", "medium", "low"].includes(extraction.confidence) ||
@@ -382,39 +385,41 @@ function resolveSourceLocalDateTime(localDateTime, sourceTimeZone, sourceOffsetM
 export function parseNormalizedTimeExpression(extraction, options = {}) {
   const defaultSourceTimeZone = canonicalDefaultTimeZone(options.defaultSourceTimeZone);
   const targetTimeZone = canonicalTargetTimeZone(options.targetTimeZone);
+  const locale = options.locale || "zh";
+  const message = (key, values = {}) => getMessage(key, values, locale);
   const status = extraction?.status;
 
   if (!hasValidNormalizedShape(extraction)) {
-    return normalizedFailure("在线模型返回的标准时间结构无效", extraction, options);
+    return normalizedFailure(message("invalidStructure"), extraction, options);
   }
 
   if (status === "not_time") {
-    return normalizedFailure("这段文字不是具体时间表达", extraction, options);
+    return normalizedFailure(message("notTime"), extraction, options);
   }
   if (status === "ambiguous") {
-    return normalizedFailure("在线模型无法确定具体时间", extraction, options);
+    return normalizedFailure(message("ambiguousTime"), extraction, options);
   }
   if (status === "unsupported") {
-    return normalizedFailure("在线模型返回了不支持的时间表达", extraction, options);
+    return normalizedFailure(message("unsupportedTime"), extraction, options);
   }
   if (status !== "ok") {
-    return normalizedFailure("在线模型返回了无效的标准时间结果", extraction, options);
+    return normalizedFailure(message("invalidResult"), extraction, options);
   }
 
   const startLocal = parseNormalizedLocalDateTime(extraction.start_local);
   const endLocal = extraction.end_local ? parseNormalizedLocalDateTime(extraction.end_local) : null;
-  if (!startLocal) return normalizedFailure("在线模型返回了无效的开始时间", extraction, options);
-  if (extraction.end_local && !endLocal) return normalizedFailure("在线模型返回了无效的结束时间", extraction, options);
+  if (!startLocal) return normalizedFailure(message("invalidStart"), extraction, options);
+  if (extraction.end_local && !endLocal) return normalizedFailure(message("invalidEnd"), extraction, options);
 
   const relation = extraction.relation;
   if (!["before", "by", "after", "at", "between"].includes(relation)) {
-    return normalizedFailure("在线模型返回了不支持的时间关系", extraction, options);
+    return normalizedFailure(message("invalidRelation"), extraction, options);
   }
   if (relation === "between" && !endLocal) {
-    return normalizedFailure("时间范围缺少结束时间", extraction, options);
+    return normalizedFailure(message("missingEnd"), extraction, options);
   }
   if (relation !== "between" && endLocal) {
-    return normalizedFailure("非时间范围表达不应包含结束时间", extraction, options);
+    return normalizedFailure(message("unexpectedEnd"), extraction, options);
   }
 
   const fixedAbbreviation = detectFixedTimeZoneAbbreviation(options.rawText);
@@ -423,14 +428,17 @@ export function parseNormalizedTimeExpression(extraction, options = {}) {
     ? (fixedAbbreviation ? "" : normalizeTimeZone(requestedSourceTimeZone))
     : "";
   if (requestedSourceTimeZone && !sourceTimeZone && !fixedAbbreviation) {
-    return normalizedFailure("在线模型返回了无法识别的源时区", extraction, options);
+    return normalizedFailure(message("invalidSourceZone"), extraction, options);
+  }
+  if (extraction.source_time_zone_assumed === true && sourceTimeZone && sourceTimeZone !== defaultSourceTimeZone) {
+    return normalizedFailure(message("invalidSourceZone"), extraction, options);
   }
 
   const explicitOffsetInText = detectExplicitOffset(options.rawText);
   const hasSourceOffset = fixedAbbreviation !== null || explicitOffsetInText !== null;
   const sourceOffsetMinutes = fixedAbbreviation?.offsetMinutes ?? explicitOffsetInText;
   if (sourceTimeZone && hasSourceOffset) {
-    return normalizedFailure("原文包含固定 UTC 偏移量时不能返回 IANA 时区", extraction, options);
+    return normalizedFailure(message("offsetWithZone"), extraction, options);
   }
 
   const effectiveSourceTimeZone = sourceTimeZone || (hasSourceOffset ? formatFixedOffsetName(sourceOffsetMinutes) : defaultSourceTimeZone);
@@ -439,16 +447,17 @@ export function parseNormalizedTimeExpression(extraction, options = {}) {
     ? resolveSourceLocalDateTime(endLocal, effectiveSourceTimeZone, sourceOffsetMinutes)
     : null;
   if (endInstant && endInstant <= instant) {
-    return normalizedFailure("在线模型返回的时间范围顺序无效", extraction, options);
+    return normalizedFailure(message("invalidRange"), extraction, options);
   }
 
+  const sourceTimeZoneAssumed = !hasSourceOffset && (extraction.source_time_zone_assumed === true || !requestedSourceTimeZone);
   const assumptions = [
     ...(Array.isArray(extraction.assumptions) ? extraction.assumptions : []),
     ...(fixedAbbreviation
-      ? ["原文时区缩写 " + fixedAbbreviation.token + " 按固定 " + formatFixedOffsetName(fixedAbbreviation.offsetMinutes) + " 计算"]
+      ? [message("fixedAbbreviation", { token: fixedAbbreviation.token, zone: formatFixedOffsetName(fixedAbbreviation.offsetMinutes) })]
       : []),
-    ...(!requestedSourceTimeZone && !hasSourceOffset
-      ? [`未写明源时区，使用默认源时区 ${defaultSourceTimeZone}`]
+    ...(sourceTimeZoneAssumed
+      ? [message("assumedSource", { zone: defaultSourceTimeZone })]
       : []),
   ];
   const startText = String(extraction.start_local);
@@ -458,6 +467,7 @@ export function parseNormalizedTimeExpression(extraction, options = {}) {
     ok: true,
     rawText: options.rawText || "",
     sourceTimeZone: sourceTimeZone || (hasSourceOffset ? formatFixedOffsetName(sourceOffsetMinutes) : defaultSourceTimeZone),
+    sourceTimeZoneAssumed,
     sourceTimeZoneName: sourceOffsetMinutes === null
       ? formatTimeZoneName(instant, effectiveSourceTimeZone)
       : formatFixedOffsetName(sourceOffsetMinutes),
@@ -469,7 +479,7 @@ export function parseNormalizedTimeExpression(extraction, options = {}) {
     instant: instant.toISOString(),
     endInstant: endInstant?.toISOString() || null,
     sourceOffsetMinutes: sourceOffsetMinutes ?? undefined,
-    displayText: displayForRelation(relation, instant, endInstant, targetTimeZone),
+    displayText: displayForRelation(relation, instant, endInstant, targetTimeZone, locale),
     assumptions,
     confidence: extraction.confidence || 0.8,
   };

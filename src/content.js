@@ -1,7 +1,8 @@
 import confetti from "canvas-confetti";
 import celebrationYearFontUrl from "./assets/Baloo2-ExtraBold.woff2";
 import { isBlockedSite, normalizeBlockedSites } from "./shared/config.js";
-import { getAnonymousInstallId, getInstallId } from "./shared/install-id.js";
+import { getInstallId, isVipInstallId } from "./shared/install-id.js";
+import { getMessage as t } from "./shared/i18n.js";
 import { getCuteZodiacEmoji } from "./shared/zodiac.js";
 
 let tooltipHost = null;
@@ -16,12 +17,8 @@ let customTimeKeywords = [];
 let blockedSites = [];
 let selectionTimer = null;
 let currentReferenceContext = null;
-let reportCaseKey = "";
-let reportState = "idle";
-let reportError = "";
 let pointerGesture = null;
 let pendingSelectionSnapshot = null;
-let anonymousInstallId = "";
 let magicCode = "";
 
 const POINTER_MOVE_THRESHOLD = 4;
@@ -235,12 +232,6 @@ void getInstallId().then((installId) => {
   magicCode = installId;
 }).catch(() => {
   magicCode = "";
-});
-
-void getAnonymousInstallId().then((installId) => {
-  anonymousInstallId = installId;
-}).catch(() => {
-  // The anonymous ID is only used for optional feedback metadata.
 });
 
 chrome.storage.onChanged.addListener((changes, areaName) => {
@@ -525,17 +516,15 @@ function tooltipStyles() {
     .result.loading { color: #2d5cff; font-size: 10px; font-weight: 400; }
     .result.failed { color: #d94b3f; font-size: 10px; font-weight: 400; }
     .toolbar { align-items: center; display: flex; gap: 1px; justify-content: flex-end; margin-top: 1px; }
-    button { align-items: center; background: transparent; border: 0; border-radius: 5px; color: #7c8490; cursor: pointer; display: inline-flex; font: inherit; justify-content: center; min-height: 18px; min-width: 18px; padding: 2px; transition: background .15s ease, color .15s ease, transform .15s ease; }
-    button:hover, button:focus-visible { background: #eef2ff; color: #2d5cff; outline: none; }
-    button:active { transform: translateY(1px); }
+    button, .report { align-items: center; background: transparent; border: 0; border-radius: 5px; color: #7c8490; cursor: pointer; display: inline-flex; font: inherit; justify-content: center; min-height: 18px; min-width: 18px; padding: 2px; text-decoration: none; transition: background .15s ease, color .15s ease, transform .15s ease; }
+    button:hover, button:focus-visible, .report:hover, .report:focus-visible { background: #eef2ff; color: #2d5cff; outline: none; }
+    button:active, .report:active { transform: translateY(1px); }
     .copy { color: #2d5cff; }
     .copy:hover, .copy:focus-visible { color: #2148d7; }
     .refresh { color: #687180; }
     .refresh:hover, .refresh:focus-visible { color: #2d5cff; }
     .report { color: #d8834f; }
     .report:hover, .report:focus-visible { color: #c76537; }
-    .report.reported { color: #5f9d7e; }
-    .report.failed { color: #d94b3f; }
     .report-emoji { display: inline-block; font-size: 11px; line-height: 1; }
     .celebrate { color: #9a6a00; font-size: 9px; font-weight: 700; gap: 2px; letter-spacing: .01em; padding: 2px 4px; white-space: nowrap; }
     .celebrate:hover, .celebrate:focus-visible { background: #fff5d9; color: #7d5300; }
@@ -564,6 +553,7 @@ function tooltipStyles() {
     .details-label { color: #9aa2af; flex: 0 0 auto; }
     .details-value { color: #303641; text-align: right; word-break: break-word; }
     .reference-note { color: #8d96a3; font-size: 8px; line-height: 1.2; margin-top: 4px; text-align: right; }
+    .source-assumption { color: #8a6500; font-size: 8px; line-height: 1.2; margin-top: 3px; text-align: right; }
     .assumption { color: #8a6500; margin-top: 7px; }
     .error { color: #d94b3f; font-size: 10px; line-height: 1.35; margin-top: 6px; }
     .error-actions { display: flex; gap: 3px; justify-content: flex-end; margin-top: 3px; }
@@ -593,7 +583,7 @@ function celebrationButtonIcon() {
 }
 
 function celebrationButtonLabel() {
-  return getHolidayTheme()?.buttonLabel || "接案順心!";
+  return isVipInstallId(magicCode) ? getHolidayTheme()?.buttonLabel || "接案順心!" : t("celebrate");
 }
 
 function getCelebrationProfile(holdDuration = 0) {
@@ -652,7 +642,7 @@ function getCelebrationOrigin(button) {
 }
 
 function getCelebrationName() {
-  return String(magicCode || "").trim();
+  return isVipInstallId(magicCode) ? String(magicCode || "").trim() : "";
 }
 
 function formatCelebrationMessage(message) {
@@ -884,6 +874,7 @@ function getHolidayEmojiShapes(
 }
 
 function consumeHolidayComboMessage(theme) {
+  if (!isVipInstallId(magicCode)) return t("holidayMessage");
   const messages = theme.comboMessages;
   if (!Array.isArray(messages) || messages.length === 0) return formatCelebrationMessage(theme.comboMessage);
   const messageKey = theme.comboMessageKey || messages;
@@ -999,7 +990,7 @@ function triggerHolidayCelebration(shoot, origin, button, theme, { combo = false
     showEasterEggMessage(button, {
       color: theme.messageColor,
       shadowColor: `${theme.messageColor}40`,
-      text: combo ? consumeHolidayComboMessage(theme) : theme.message,
+      text: isVipInstallId(magicCode) ? combo ? consumeHolidayComboMessage(theme) : theme.message : t("holidayMessage"),
     });
   }
 }
@@ -1024,7 +1015,7 @@ function triggerFreezeDriedParticles(shoot, origin, { particleCount = 10, spread
   });
 }
 
-function showEasterEggMessage(button, { color = "#ef5b8b", shadowColor = "rgba(239, 91, 139, .24)", text = `🧩 ${getCelebrationName()}~` } = {}) {
+function showEasterEggMessage(button, { color = "#ef5b8b", shadowColor = "rgba(239, 91, 139, .24)", text = t("celebrationMessage") } = {}) {
   const card = button.closest(".card") || button.getRootNode?.().querySelector?.(".card");
   const layer = card?.querySelector(".celebration-layer");
   if (!card || !layer) return;
@@ -1100,6 +1091,7 @@ function triggerComboCelebration(button) {
 }
 
 function consumeClickEasterEggMessage() {
+  if (!isVipInstallId(magicCode)) return t("celebrationMessage");
   const message = formatCelebrationMessage(CLICK_EASTER_EGG_MESSAGES[clickEasterEggMessageIndex]);
   clickEasterEggMessageIndex = (clickEasterEggMessageIndex + 1) % CLICK_EASTER_EGG_MESSAGES.length;
   return message;
@@ -1184,7 +1176,7 @@ function renderLoading(text, rect) {
       <div class="flow">
         <div class="side"><div class="source" title="${escapeHtml(text)}">${escapeHtml(text)}</div></div>
         <div class="arrow">→</div>
-        <div class="side target-side"><div class="result loading">正在换算…</div></div>
+        <div class="side target-side"><div class="result loading">${t("loading")}</div></div>
       </div>
     </div>`;
   placeHost(rect);
@@ -1195,21 +1187,9 @@ function renderResult(result, text, rect) {
   currentResult = result;
   currentText = text;
   currentAnchorRect = rect;
-  const nextReportCaseKey = `${text}\u0000${result?.ok ? result.displayText || "" : result?.reason || result?.error || ""}`;
-  if (reportCaseKey !== nextReportCaseKey) {
-    reportCaseKey = nextReportCaseKey;
-    reportState = "idle";
-    reportError = "";
-  }
-
-  const reportButton = () => {
-    const reported = reportState === "sent";
-    const failed = reportState === "failed";
-    const sending = reportState === "sending";
-    const label = reported ? "已抱怨" : failed ? "抱怨失败，点击重试" : "抱怨一下";
-    const buttonClass = `report${reported ? " reported" : failed ? " failed" : ""}`;
-    return `<button class="${buttonClass}" aria-label="${label}" title="${label}" data-action="report"${sending ? " disabled aria-busy=\"true\"" : ""}>${icon(reported ? "check" : "report")}</button>`;
-  };
+  const reportText = [text, result?.displayText || result?.reason || result?.error || ""].join("\n");
+  const reportUrl = `mailto:reon.hypr@gmail.com?subject=Time%20Translator%20Feedback&body=${encodeURIComponent(reportText)}`;
+  const reportAction = `<a class="report" href="${reportUrl}" aria-label="${t("reportIssue")}" title="${t("reportIssue")}">${icon("report")}</a>`;
   const celebrateLabel = celebrationButtonLabel();
   const celebrateAction = `<button type="button" class="celebrate" aria-label="${celebrateLabel}" title="${celebrateLabel}" data-action="celebrate">${celebrationButtonIcon()}<span>${celebrateLabel}</span></button>`;
   if (!result?.ok) {
@@ -1219,14 +1199,14 @@ function renderResult(result, text, rect) {
         <div class="flow">
           <div class="side"><div class="source" title="${escapeHtml(text)}">${escapeHtml(text)}</div></div>
           <div class="arrow">→</div>
-          <div class="side target-side"><div class="result failed">无法确定</div></div>
+          <div class="side target-side"><div class="result failed">${t("unknownTime")}</div></div>
         </div>
-        <div class="error">${escapeHtml(result?.reason || result?.error || "请补充日期、时间或时区")}</div>
+        <div class="error">${escapeHtml(result?.reason || result?.error || t("missingTime"))}</div>
         <div class="error-actions">
           ${celebrateAction}
-          <button class="refresh" aria-label="重新解析" title="重新解析" data-action="refresh">${icon("refresh")}</button>
-          ${reportButton()}
-          <button class="close" aria-label="关闭" title="关闭" data-action="close">${icon("close")}</button>
+          <button class="refresh" aria-label="${t("retry")}" title="${t("retry")}" data-action="refresh">${icon("refresh")}</button>
+          ${reportAction}
+          <button class="close" aria-label="${t("close")}" title="${t("close")}" data-action="close">${icon("close")}</button>
         </div>
       </div>`;
     placeHost(rect);
@@ -1237,17 +1217,22 @@ function renderResult(result, text, rect) {
   const sourceZone = formatSourceZone(result);
   const targetZone = formatTargetZone(result);
   const source = escapeHtml(sourceZone);
-  const relationLabels = { before: "不晚于", by: "截止", after: "之后", at: "时间点", between: "时间范围", from: "时间范围" };
-  const assumptions = (result.assumptions || []).map((item) => `<div>· ${escapeHtml(item)}</div>`).join("");
+  const relationLabels = { before: t("relationBefore"), by: t("relationBy"), after: t("relationAfter"), at: t("relationAt"), between: t("relationBetween"), from: t("relationBetween") };
+  const assumptions = (result.assumptions || [])
+    .filter((item) => !result.sourceTimeZoneAssumed || item !== t("assumedSource", { zone: result.sourceTimeZone }))
+    .map((item) => `<div>· ${escapeHtml(item)}</div>`).join("");
   const referenceNote = result.referenceContext?.kind === "gmail_message" && result.referenceContext.relative
-    ? `<div class="reference-note">按邮件日期计算${result.referenceContext.dateText ? `：${escapeHtml(result.referenceContext.dateText)}` : ""}</div>`
+    ? `<div class="reference-note">${t("gmailReference")}${result.referenceContext.dateText ? `: ${escapeHtml(result.referenceContext.dateText)}` : ""}</div>`
+    : "";
+  const sourceAssumption = result.sourceTimeZoneAssumed
+    ? `<div class="source-assumption">${escapeHtml(t("assumedSource", { zone: result.sourceTimeZone }))}</div>`
     : "";
   const details = detailsOpen ? `<div class="details">
-      <div class="details-row"><span class="details-label">源时区</span><span class="details-value">${source}</span></div>
-      <div class="details-row"><span class="details-label">语义</span><span class="details-value">${escapeHtml(relationLabels[result.relation] || result.relation || "时间转换")}</span></div>
-      <div class="details-row"><span class="details-label">解析</span><span class="details-value">${escapeHtml(result.engine || "在线模型")}</span></div>
-      <div class="details-row"><span class="details-label">目标</span><span class="details-value">${escapeHtml(targetZone)}</span></div>
-      ${result.referenceContext?.kind === "gmail_message" && result.referenceContext.relative ? `<div class="details-row"><span class="details-label">参考</span><span class="details-value">按邮件日期计算${result.referenceContext.dateText ? ` · ${escapeHtml(result.referenceContext.dateText)}` : ""}</span></div>` : ""}
+      <div class="details-row"><span class="details-label">${t("sourceZone")}</span><span class="details-value">${source}</span></div>
+      <div class="details-row"><span class="details-label">${t("relation")}</span><span class="details-value">${escapeHtml(relationLabels[result.relation] || result.relation || t("relation"))}</span></div>
+      <div class="details-row"><span class="details-label">${t("engine")}</span><span class="details-value">${escapeHtml(result.engine || t("onlineModel"))}</span></div>
+      <div class="details-row"><span class="details-label">${t("targetZone")}</span><span class="details-value">${escapeHtml(targetZone)}</span></div>
+      ${result.referenceContext?.kind === "gmail_message" && result.referenceContext.relative ? `<div class="details-row"><span class="details-label">${t("reference")}</span><span class="details-value">${t("gmailReference")}${result.referenceContext.dateText ? ` · ${escapeHtml(result.referenceContext.dateText)}` : ""}</span></div>` : ""}
       ${assumptions ? `<div class="assumption">${assumptions}</div>` : ""}
       ${result.error ? `<div class="error">${escapeHtml(result.error)}</div>` : ""}
     </div>` : "";
@@ -1264,15 +1249,16 @@ function renderResult(result, text, rect) {
           <div class="result">${escapeHtml(result.displayText)}</div>
           <div class="zone">${escapeHtml(targetZone)}</div>
           ${referenceNote}
+          ${sourceAssumption}
         </div>
       </div>
       <div class="toolbar">
         ${celebrateAction}
-        <button class="copy" aria-label="复制北京时间" title="复制北京时间" data-action="copy" data-copy="${escapeHtml(result.displayText)}">${icon("copy")}</button>
-        <button class="refresh" aria-label="重新解析" title="重新解析" data-action="refresh">${icon("refresh")}</button>
-        ${reportButton()}
-        <button class="info${detailsOpen ? " active" : ""}" aria-label="查看转换详情" title="查看转换详情" data-action="info">${icon("info")}</button>
-        <button class="close" aria-label="关闭" title="关闭" data-action="close">${icon("close")}</button>
+        <button class="copy" aria-label="${t("copy")}" title="${t("copy")}" data-action="copy" data-copy="${escapeHtml(result.displayText)}">${icon("copy")}</button>
+        <button class="refresh" aria-label="${t("retry")}" title="${t("retry")}" data-action="refresh">${icon("refresh")}</button>
+        ${reportAction}
+        <button class="info${detailsOpen ? " active" : ""}" aria-label="${t("details")}" title="${t("details")}" data-action="info">${icon("info")}</button>
+        <button class="close" aria-label="${t("close")}" title="${t("close")}" data-action="close">${icon("close")}</button>
       </div>
       ${details}
     </div>`;
@@ -1344,7 +1330,11 @@ function bindCelebrationButton(host) {
     if (isLongPress) {
       const celebrationMode = triggerCelebration(celebrateButton, holdDuration);
       if (celebrationMode === "normal") {
-        showEasterEggMessage(celebrateButton, { color: "#7c5cfc", shadowColor: "rgba(124, 92, 252, .36)", text: `🧩 ${getCelebrationName()}~ 接案順心！` });
+        showEasterEggMessage(celebrateButton, {
+          color: "#7c5cfc",
+          shadowColor: "rgba(124, 92, 252, .36)",
+          text: isVipInstallId(magicCode) ? `🧩 ${getCelebrationName()}~ 接案順心！` : t("celebrationMessage"),
+        });
       }
       return;
     }
@@ -1368,14 +1358,12 @@ function formatSourceZone(result) {
   const name = String(result?.sourceTimeZoneName || "").trim();
   const zone = String(result?.sourceTimeZone || "").trim();
   if (name && zone && name !== zone) return `${name} · ${zone}`;
-  return name || zone || "源时区";
+  return name || zone || t("sourceZone");
 }
 
 function formatTargetZone(result) {
   const zone = String(result?.targetTimeZone || "").trim();
-  if (zone === "Asia/Shanghai") return "北京时间 · UTC+8";
-  if (zone === "UTC") return "UTC · UTC+0";
-  return zone || "目标时区";
+  return zone || t("targetZone");
 }
 
 function renderAndParse(info, force = false) {
@@ -1393,7 +1381,7 @@ function renderAndParse(info, force = false) {
   sendRuntimeMessage({ type: "PARSE_TEXT", text: info.text, referenceContext: currentReferenceContext }, (result, runtimeError) => {
     if (requestId !== requestSequence) return;
     const celebrateFirstAutomaticHolidayTooltip = () => {
-      if (force || !autoConvert) return;
+      if (force || !autoConvert || !isVipInstallId(magicCode)) return;
       const holidayKey = getHolidayTheme()?.holidayAutoCelebrationKey;
       if (!holidayKey) return;
       const celebrateIfClaimed = (claim) => {
@@ -1411,7 +1399,7 @@ function renderAndParse(info, force = false) {
       renderResult(
         {
           ok: false,
-          reason: runtimeError?.message || result?.reason || result?.error || "这段文字还缺少具体时间",
+          reason: runtimeError?.message || result?.reason || result?.error || t("missingTime"),
         },
         info.text,
         info.rect,
@@ -1449,13 +1437,13 @@ function handleTooltipClick(event) {
   } else if (action === "copy") {
     navigator.clipboard?.writeText(button.dataset.copy || "");
     button.innerHTML = icon("check");
-    button.setAttribute("aria-label", "已复制");
-    button.setAttribute("title", "已复制");
+    button.setAttribute("aria-label", t("copied"));
+    button.setAttribute("title", t("copied"));
     setTimeout(() => {
       if (button.isConnected) {
         button.innerHTML = icon("copy");
-        button.setAttribute("aria-label", "复制北京时间");
-        button.setAttribute("title", "复制北京时间");
+        button.setAttribute("aria-label", t("copy"));
+        button.setAttribute("title", t("copy"));
       }
     }, 1200);
   } else if (action === "refresh") {
@@ -1464,33 +1452,6 @@ function handleTooltipClick(event) {
     if (retryText) renderAndParse({ text: retryText, rect: retryRect, referenceContext: currentReferenceContext }, true);
   } else if (action === "celebrate") {
     triggerCelebration(button);
-  } else if (action === "report") {
-    if (!currentText || reportState === "sending" || reportState === "sent") return;
-    const caseKey = reportCaseKey;
-    reportState = "sending";
-    reportError = "";
-    renderResult(currentResult, currentText, currentAnchorRect);
-    const sent = sendRuntimeMessage(
-      {
-        type: "REPORT_CASE",
-        rawText: currentText,
-        result: currentResult,
-        referenceContext: currentReferenceContext,
-        anonymousInstallId,
-        magicCode,
-      },
-      (response, runtimeError) => {
-        if (caseKey !== reportCaseKey) return;
-        reportState = response?.ok ? "sent" : "failed";
-        reportError = runtimeError?.message || response?.reason || "反馈上报失败";
-        renderResult(currentResult, currentText, currentAnchorRect);
-      },
-    );
-    if (!sent && caseKey === reportCaseKey) {
-      reportState = "failed";
-      reportError = "反馈上报失败";
-      renderResult(currentResult, currentText, currentAnchorRect);
-    }
   } else if (action === "info") {
     detailsOpen = !detailsOpen;
     renderResult(currentResult, currentText, currentAnchorRect);

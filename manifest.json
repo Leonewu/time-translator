@@ -1,8 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "Time Translator – Time Zone Converter",
+  "name": "__MSG_extensionName__",
   "version": "0.1.24",
-  "description": "元气100%的时区转换工具：轻松读懂时差。",
+  "default_locale": "en",
+  "description": "__MSG_extensionDescription__",
   "icons": {
     "16": "src/assets/icon-16.png",
     "32": "src/assets/icon-32.png",
@@ -16,7 +17,7 @@
     "type": "module"
   },
   "action": {
-    "default_title": "Time Translator – Time Zone Converter · 元气100%",
+    "default_title": "__MSG_extensionTitle__",
     "default_icon": {
       "16": "src/assets/icon-16.png",
       "32": "src/assets/icon-32.png"
@@ -35,7 +36,7 @@
       "suggested_key": {
         "default": "Alt+Shift+T"
       },
-      "description": "转换当前选中文本"
+      "description": "__MSG_convertSelection__"
     }
   }
 }

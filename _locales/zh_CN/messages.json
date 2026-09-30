@@ -1,0 +1,6 @@
+{
+  "extensionName": { "message": "Time Translator – 时区转换工具" },
+  "extensionDescription": { "message": "使用你自己的模型 API Key，将选中的英文时间表达换算到目标时区。" },
+  "extensionTitle": { "message": "Time Translator – 时区转换工具" },
+  "convertSelection": { "message": "转换当前选中的时间表达" }
+}

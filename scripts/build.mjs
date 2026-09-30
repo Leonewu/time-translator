@@ -8,6 +8,7 @@ const dist = resolve(root, "dist");
 await rm(dist, { recursive: true, force: true });
 await mkdir(dist, { recursive: true });
 await cp(resolve(root, "manifest.json"), resolve(dist, "manifest.json"));
+await cp(resolve(root, "_locales"), resolve(dist, "_locales"), { recursive: true });
 await cp(resolve(root, "src"), resolve(dist, "src"), { recursive: true });
 await build({
   bundle: true,

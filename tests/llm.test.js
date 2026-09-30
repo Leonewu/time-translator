@@ -44,6 +44,15 @@ test("Gmail 上下文会告诉模型 today 相对邮件时间解析", () => {
   assert.match(prompt, /Reference instant: 2026-08-20T23:30:00\.000Z/);
 });
 
+test("模型的自由文本假设和失败原因随界面语言请求", () => {
+  const reference = new Date("2026-08-20T23:30:00.000Z");
+  const en = buildExtractionPrompt("today at noon", reference, "Europe/London");
+  const zh = buildExtractionPrompt("today at noon", reference, "Europe/London", null, "zh");
+  assert.match(en, /Response language for reason and assumptions: English/);
+  assert.match(zh, /Response language for reason and assumptions: Simplified Chinese/);
+  assert.match(zh, /Selected English text: "today at noon"/);
+});
+
 test("模型提示词要求省略日期时使用参考日期，并处理 close of business", () => {
   const prompt = buildExtractionPrompt(
     "between 2 and 4 pm Pacific time",

@@ -66,8 +66,8 @@ test("内容脚本把选中文字所属 Gmail 邮件的时间作为参考上下�
   assert.match(contentSource, /class="reference-note"/);
   assert.match(contentSource, /referenceContext: currentReferenceContext/);
   assert.match(backgroundSource, /const reference = context \? new Date\(context\.referenceInstant\) : new Date\(\)/);
-  assert.match(backgroundSource, /无法读取当前 Gmail 邮件日期/);
+  assert.match(backgroundSource, /getMessage\("missingGmailDate"\)/);
   assert.match(backgroundSource, /formatReferenceDate/);
-  assert.match(backgroundSource, /相对日期按 Gmail 邮件时间计算/);
+  assert.match(backgroundSource, /getMessage\("gmailAssumption"\)/);
   assert.match(manifest, /"src\/shared\/gmail\.js", "src\/content\.js"/);
 });

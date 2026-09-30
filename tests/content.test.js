@@ -62,7 +62,7 @@ test("成功 Tooltip 两侧显示各自时区，主文本使用轻量字重", ()
   assert.match(contentSource, /formatTargetZone\(result\)/);
   assert.match(contentSource, /\.source \{[^}]*font-weight: 400/);
   assert.match(contentSource, /\.result \{[^}]*font-weight: 400/);
-  assert.match(contentSource, /details-label">目标<\/span><span class="details-value">\$\{escapeHtml\(targetZone\)\}/);
+  assert.match(contentSource, /details-label">\$\{t\("targetZone"\)\}<\/span><span class="details-value">\$\{escapeHtml\(targetZone\)\}/);
 });
 
 test("Tooltip 尺寸和操作 icon 保持紧凑", () => {
@@ -78,7 +78,7 @@ test("转换结果日期保持单行完整显示，并提示 Gmail 参考日期"
   assert.match(contentSource, /<div class="side target-side">[\s\S]*\$\{referenceNote\}/);
   assert.doesNotMatch(contentSource, /\.source \{[^}]*overflow-wrap: anywhere/);
   assert.match(contentSource, /\.result \{[^}]*white-space: nowrap/);
-  assert.match(contentSource, /按邮件日期计算/);
+  assert.match(contentSource, /t\("gmailReference"\)/);
 });
 
 test("复制成功只切换为勾选 icon，不渲染大号文字", () => {
@@ -101,8 +101,8 @@ test("失败 Tooltip 也提供庆祝按钮和彩纸层", () => {
 });
 
 test("成功转换后的 Tooltip 提供节日化按钮和 Canvas 蓄力彩纸效果", () => {
-  assert.match(contentSource, /import \{ getAnonymousInstallId, getInstallId \} from "\.\/shared\/install-id\.js"/);
-  assert.match(contentSource, /getAnonymousInstallId\(\)/);
+  assert.match(contentSource, /import \{ getInstallId, isVipInstallId \} from "\.\/shared\/install-id\.js"/);
+  assert.doesNotMatch(contentSource, /getAnonymousInstallId\(\)/);
   assert.match(contentSource, /const celebrateAction = `<button/);
   assert.match(contentSource, /data-action="celebrate"/);
   assert.match(contentSource, /<span>\$\{celebrateLabel\}<\/span>/);
@@ -158,7 +158,7 @@ test("成功转换后的 Tooltip 提供节日化按钮和 Canvas 蓄力彩纸效
   assert.match(contentSource, /function getTooltipButton/);
   assert.doesNotMatch(contentSource, /lastCelebrateAt|celebratedAt|celebrationDebug|TT-celebrate/);
   assert.match(contentSource, /action === "celebrate"/);
-  assert.doesNotMatch(contentSource, /vipEnabled|isVipInstallId/);
+  assert.match(contentSource, /isVipInstallId\(magicCode\)/);
 });
 
 test("接案順心按钮的图标和文案随节日模式切换，普通模式保留默认值", () => {
@@ -190,7 +190,7 @@ test("节日首次自动 Tooltip 后才申请一次自动彩蛋，预览不写�
   assert.match(contentSource, /holidayAutoCelebrationKey: `\$\{themeKey\}:\$\{dateKey\}`/);
   assert.match(contentSource, /const previewHolidayAutoCelebrations = new Set\(\)/);
   assert.match(contentSource, /function claimPreviewHolidayAutoCelebration\(holidayKey\)/);
-  assert.match(contentSource, /if \(force \|\| !autoConvert\) return;/);
+  assert.match(contentSource, /if \(force \|\| !autoConvert \|\| !isVipInstallId\(magicCode\)\) return;/);
   assert.match(contentSource, /type: "CLAIM_HOLIDAY_AUTO_CELEBRATION", holidayKey/);
   assert.match(contentSource, /const celebrateButton = getRenderedCelebrationButton\(\)/);
   assert.match(contentSource, /claim\?\.ok && claim\.claimed && celebrateButton/);
@@ -262,7 +262,7 @@ test("节日模式使用可辨认的 Emoji、专属配色和专属文案", () =>
   assert.match(contentSource, /const messageKey = theme\.comboMessageKey \|\| messages/);
   assert.match(contentSource, /holidayComboMessageIndices\.set\(messageKey, \(index \+ 1\) % messages\.length\)/);
   assert.match(contentSource, /return formatCelebrationMessage\(messages\[index\]\)/);
-  assert.match(contentSource, /text: combo \? consumeHolidayComboMessage\(theme\) : theme\.message/);
+  assert.match(contentSource, /text: isVipInstallId\(magicCode\) \? combo \? consumeHolidayComboMessage\(theme\) : theme\.message : t\("holidayMessage"\)/);
 });
 
 test("圣诞仅使用 Emoji 雪花，不再绘制 SVG 雪花轮廓", () => {
@@ -427,7 +427,7 @@ test("VIP 彩蛋支持十秒十次点击，长按复用普通蓄力彩带", () =
   assert.match(contentSource, /const CLICK_EASTER_EGG_MESSAGES = \[[\s\S]*"🧩 \{name\}~"[\s\S]*"希望看到这里的时候，你今天心情不错。🎉"[\s\S]*"希望你正在过一个普通但舒服的下午。"[\s\S]*"希望你今天能看到好看的夕阳🌇和月亮🌙"[\s\S]*"随时 feedback 我，if needs"[\s\S]*\]/);
   assert.doesNotMatch(contentSource, /真的很抱歉/);
   assert.match(contentSource, /function getCelebrationName/);
-  assert.match(contentSource, /return String\(magicCode \|\| ""\)\.trim\(\)/);
+  assert.match(contentSource, /return isVipInstallId\(magicCode\) \? String\(magicCode \|\| ""\)\.trim\(\) : ""/);
   assert.doesNotMatch(contentSource, /DEFAULT_CELEBRATION_NAME/);
   assert.match(contentSource, /function formatCelebrationMessage/);
   assert.match(contentSource, /replaceAll\("\{name\}", getCelebrationName\(\)\)/);
@@ -466,17 +466,16 @@ test("长按超过 1 秒先倾斜颤抖，松手后恢复普通蓄力彩带并�
   assert.match(contentSource, /@keyframes celebrate-charge-wiggle/);
   assert.match(contentSource, /const holdDuration = pendingHoldDuration \|\| 0/);
   assert.match(contentSource, /const isLongPress = holdDuration >= CELEBRATION_SHAKE_THRESHOLD_MS/);
-  assert.match(contentSource, /if \(isLongPress\) \{[\s\S]*triggerCelebration\(celebrateButton, holdDuration\);[\s\S]*showEasterEggMessage\(celebrateButton, \{ color: "#7c5cfc", shadowColor: "rgba\(124, 92, 252, \.36\)", text: `🧩 \$\{getCelebrationName\(\)\}~ 接案順心！` \}\);[\s\S]*return;/);
+  assert.match(contentSource, /if \(isLongPress\) \{[\s\S]*triggerCelebration\(celebrateButton, holdDuration\);[\s\S]*text: isVipInstallId\(magicCode\) \? `🧩 \$\{getCelebrationName\(\)\}~ 接案順心！` : t\("celebrationMessage"\),[\s\S]*return;/);
   assert.match(contentSource, /if \(!isClickEasterEgg\) triggerCelebration\(celebrateButton, holdDuration\)/);
   assert.doesNotMatch(contentSource, /LONG_HOLD_HEART_COLORS|fallingMessage|getFallingMessageShape|isLongPressEasterEgg|pendingLongPress|longPressReady/);
   const startShakeTimerBlock = contentSource.match(/const startShakeTimer = \(\) => \{[\s\S]*?\n    \};/)?.[0] || "";
   assert.doesNotMatch(startShakeTimerBlock, /triggerComboCelebration/);
 });
 
-test("Tooltip 提供抱怨按钮，并只通过后台上报当前 case", () => {
+test("Tooltip 反馈需用户确认邮件，不在后台传输私人内容或 Key", () => {
   assert.match(contentSource, /report: '<span[^>]*>💢<\/span>'/);
-  assert.match(contentSource, /data-action="report"/);
-  assert.match(contentSource, /type: "REPORT_CASE"/);
-  assert.match(contentSource, /抱怨一下/);
-  assert.match(contentSource, /已抱怨/);
+  assert.match(contentSource, /mailto:reon\.hypr@gmail\.com\?subject=Time%20Translator%20Feedback&body=\$\{encodeURIComponent\(reportText\)\}/);
+  assert.match(contentSource, /\[text, result\?\.displayText \|\| result\?\.reason \|\| result\?\.error \|\| ""\]/);
+  assert.doesNotMatch(contentSource, /REPORT_CASE|anonymousInstallId|apiKey/);
 });

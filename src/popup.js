@@ -1,11 +1,12 @@
 import { createSettingsSaver, getProviderPreset, loadSettings, normalizeBlockedSites, normalizeCustomKeywords, PROVIDER_PRESETS, saveSettings } from "./shared/config.js";
 import { applyI18n, getMessage as t } from "./shared/i18n.js";
-import { getAnonymousInstallId, getInstallId, isVipInstallId, setInstallId } from "./shared/install-id.js";
+import { getInstallId, isVipInstallId, setInstallId } from "./shared/install-id.js";
 import { listAvailableModels } from "./shared/llm.js";
 
 applyI18n();
 
 const provider = document.querySelector("#provider");
+const providerKeyLink = document.querySelector("#providerKeyLink");
 const model = document.querySelector("#model");
 const endpoint = document.querySelector("#endpoint");
 const apiKey = document.querySelector("#apiKey");
@@ -41,10 +42,6 @@ let installIdSaveTimer;
 let currentInstallId = "";
 let installIdInputDirty = false;
 const saveSettingsInOrder = createSettingsSaver(saveSettings);
-
-void getAnonymousInstallId().catch(() => {
-  // The anonymous ID is not displayed in the popup.
-});
 
 for (const [key, value] of Object.entries(PROVIDER_PRESETS)) {
   const option = document.createElement("option");
@@ -88,6 +85,16 @@ function fillProviderFields() {
   endpoint.value = profile.endpoint;
   model.value = profile.model;
   apiKey.value = profile.apiKey;
+  providerKeyLink.hidden = !preset.apiKeyUrl;
+  if (preset.apiKeyUrl) providerKeyLink.href = preset.apiKeyUrl;
+}
+
+function updateTargetZone() {
+  const zone = document.querySelector("#targetTimeZone").value;
+  document.querySelector("#targetZoneName").textContent = t("targetTimezone");
+  const code = document.querySelector("#targetZoneCode");
+  code.textContent = zone;
+  code.title = zone;
 }
 
 function updatePluginState() {
@@ -240,7 +247,7 @@ async function refreshModelOptions({ force = false, silent = false } = {}) {
       if (isCurrentModelCatalog(key)) {
         const message = error.code === "region_restricted"
           ? t("regionRestricted")
-          : error.message || "暂时无法读取模型列表，可继续手动填写模型名。";
+          : error.message || t("modelListError");
         setModelStatus(message, "error");
       }
       return [];
@@ -264,7 +271,12 @@ function writeForm(value) {
   applyTheme(value.theme);
   customKeywords.value = value.customKeywords.join("\n");
   blockedWebsites.value = value.blockedSites.join("\n");
-  document.querySelector("#targetTimeZone").value = value.targetTimeZone;
+  const targetSelect = document.querySelector("#targetTimeZone");
+  if (![...targetSelect.options].some((option) => option.value === value.targetTimeZone)) {
+    targetSelect.add(new Option(value.targetTimeZone, value.targetTimeZone));
+  }
+  targetSelect.value = value.targetTimeZone;
+  updateTargetZone();
   document.querySelector("#defaultSourceTimeZone").value = value.defaultSourceTimeZone;
   provider.value = value.llm.provider;
   activeProvider = value.llm.provider;
@@ -399,6 +411,11 @@ async function init() {
   settings = await loadSettings();
   writeForm(settings);
 
+  providerKeyLink.addEventListener("click", async (event) => {
+    event.preventDefault();
+    await persistForm();
+    await chrome.tabs.create({ url: providerKeyLink.href });
+  });
   provider.addEventListener("change", () => {
     const previousProvider = activeProvider;
     settings.providerProfiles = {
@@ -453,7 +470,10 @@ async function init() {
   blockedWebsites.addEventListener("input", () => scheduleSave(0));
   blockedWebsites.addEventListener("blur", () => scheduleSave(0));
   for (const field of [document.querySelector("#targetTimeZone"), document.querySelector("#defaultSourceTimeZone")]) {
-    field.addEventListener("change", () => scheduleSave());
+    field.addEventListener("change", () => {
+      if (field.id === "targetTimeZone") updateTargetZone();
+      scheduleSave();
+    });
   }
   autoConvert.addEventListener("change", () => {
     updatePluginState();

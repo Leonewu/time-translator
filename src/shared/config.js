@@ -1,3 +1,5 @@
+import { normalizeTimeZone } from "./time.js";
+
 export const DEFAULT_SETTINGS = {
   autoConvert: true,
   theme: "system",
@@ -78,54 +80,63 @@ export const PROVIDER_PRESETS = {
     label: "DeepSeek",
     endpoint: "https://api.deepseek.com/chat/completions",
     model: "deepseek-v4-flash",
+    apiKeyUrl: "https://platform.deepseek.com/api_keys",
     hint: "OpenAI 兼容接口；短文本解析建议关闭思考模式以降低延迟。",
   },
   mimo: {
     label: "小米 MiMo",
     endpoint: "https://api.xiaomimimo.com/v1/chat/completions",
     model: "mimo-v2.5",
+    apiKeyUrl: "https://platform.xiaomimimo.com/#/console/api-keys",
     hint: "OpenAI 兼容接口；模型名以 MiMo 控制台当前可用列表为准。",
   },
   qwen: {
     label: "通义千问 / 阿里云百炼",
     endpoint: "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
     model: "qwen-plus",
+    apiKeyUrl: "https://bailian.console.aliyun.com/cn-beijing/model/settings/api-key",
     hint: "可替换为你的业务空间专属 Endpoint。",
   },
   zhipu: {
     label: "智谱 GLM",
     endpoint: "https://open.bigmodel.cn/api/paas/v4/chat/completions",
     model: "glm-4.7",
+    apiKeyUrl: "https://bigmodel.cn/usercenter/proj-mgmt/apikeys",
     hint: "使用智谱开放平台 API Key。",
   },
   moonshot: {
     label: "月之暗面 / Kimi",
     endpoint: "https://api.moonshot.cn/v1/chat/completions",
     model: "kimi-k2.6",
+    apiKeyUrl: "https://platform.kimi.com/console/api-keys",
     hint: "Kimi Open Platform 的 OpenAI-compatible 接口。",
   },
   doubao: {
     label: "火山方舟 / 豆包",
     endpoint: "https://ark.cn-beijing.volces.com/api/v3/chat/completions",
     model: "YOUR_ENDPOINT_ID",
+    apiKeyUrl: "https://console.volcengine.com/ark/region:ark+cn-beijing/apiKey",
     hint: "把模型改成你在方舟创建的 Endpoint ID。",
   },
   gemini: {
     label: "Google Gemini",
     endpoint: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
     model: "gemini-3.7-flash",
+    apiKeyUrl: "https://aistudio.google.com/app/apikey",
     hint: "使用 Gemini 的 OpenAI-compatible 接口；模型名以 Google AI Studio 当前可用列表为准。",
   },
   openrouter: {
     label: "OpenRouter",
     endpoint: "https://openrouter.ai/api/v1/chat/completions",
     model: "",
+    apiKeyUrl: "https://openrouter.ai/settings/keys",
     hint: "统一 OpenAI-compatible 接口；刷新模型列表后选择模型。",
   },
   openai: {
     label: "OpenAI-compatible / OpenAI",
     endpoint: "https://api.openai.com/v1/chat/completions",
     model: "gpt-5.4-nano",
+    apiKeyUrl: "https://platform.openai.com/api-keys",
     hint: "也可以改成任何兼容 Chat Completions 的服务。",
   },
   custom: {
@@ -150,6 +161,9 @@ function mergeSettings(saved = {}) {
     ...DEFAULT_SETTINGS,
     ...savedWithoutLegacyEnabled,
     autoConvert: saved.autoConvert ?? legacyAutoConvert ?? DEFAULT_SETTINGS.autoConvert,
+    targetTimeZone: normalizeTimeZone(saved.targetTimeZone)
+      || normalizeTimeZone(Intl.DateTimeFormat().resolvedOptions().timeZone)
+      || DEFAULT_SETTINGS.targetTimeZone,
     theme: ["light", "dark", "system"].includes(saved.theme) ? saved.theme : DEFAULT_SETTINGS.theme,
     customKeywords: normalizeCustomKeywords(saved.customKeywords),
     blockedSites: normalizeBlockedSites(saved.blockedSites),

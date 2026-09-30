@@ -3,11 +3,8 @@ import { parseStructuredTimeExpression } from "./shared/parser.js";
 import { isTimeCandidate } from "./shared/candidate.js";
 import { requestOpenAICompatibleExtraction } from "./shared/llm.js";
 import { needsReferenceDate } from "./shared/reference.js";
-import { buildReportPayload, postCaseReport } from "./shared/report.js";
-import { getMessage } from "./shared/i18n.js";
-import { getAnonymousInstallId, getInstallId, isVipInstallId } from "./shared/install-id.js";
-
-void getAnonymousInstallId().catch((error) => console.warn("Time Translator: unable to create anonymous ID", error));
+import { getMessage, getUiLocale } from "./shared/i18n.js";
+import { getInstallId, isVipInstallId } from "./shared/install-id.js";
 
 const DEFAULT_ACTION_ICON = {
   16: "src/assets/icon-16.png",
@@ -101,8 +98,8 @@ async function resolveText(text, settings, { includeNormalization = false, refer
     return {
       ok: false,
       rawText: text,
-      engine: "Gmail 邮件上下文未读取",
-      reason: "无法读取当前 Gmail 邮件日期，暂不按当前日期换算；请展开邮件详情后重试",
+      engine: "Gmail",
+      reason: getMessage("missingGmailDate"),
       referenceContext: context,
     };
   }
@@ -111,8 +108,8 @@ async function resolveText(text, settings, { includeNormalization = false, refer
     return {
       ok: false,
       rawText: text,
-      engine: "在线模型未调用",
-      reason: "请先在插件弹窗中填写 API Key",
+      engine: getMessage("onlineModel"),
+      reason: getMessage("needKey"),
       ...(context ? { referenceContext: context } : {}),
     };
   }
@@ -124,12 +121,14 @@ async function resolveText(text, settings, { includeNormalization = false, refer
       reference,
       defaultSourceTimeZone: settings.defaultSourceTimeZone,
       referenceContext: context,
+      locale: getUiLocale(),
     });
     const resolved = parseStructuredTimeExpression(extraction, {
       reference,
       defaultSourceTimeZone: settings.defaultSourceTimeZone,
       targetTimeZone: settings.targetTimeZone,
       rawText: text,
+      locale: getUiLocale(),
     });
     const relativeReference = context?.kind === "gmail_message" && needsReferenceDate(text);
     const resultContext = context
@@ -144,20 +143,20 @@ async function resolveText(text, settings, { includeNormalization = false, refer
     const result = {
       ...resolved,
       ...(resultContext ? { referenceContext: resultContext } : {}),
-      engine: `在线模型 · ${settings.llm.provider}`,
+      engine: `${getMessage("onlineModel")} · ${settings.llm.provider}`,
     };
     if (relativeReference && result.ok) {
-      result.assumptions = [...(result.assumptions || []), "相对日期按 Gmail 邮件时间计算"];
+      result.assumptions = [...(result.assumptions || []), getMessage("gmailAssumption")];
     }
     return includeNormalization ? { ...result, llmNormalization: extraction } : result;
   } catch (error) {
     const reason = error.code === "region_restricted"
       ? getMessage("regionRestricted")
-      : `在线模型解析失败：${error.message}`;
+      : getMessage("extractionFailed", { reason: error.message });
     return {
       ok: false,
       rawText: text,
-      engine: `在线模型 · ${settings.llm.provider}`,
+      engine: `${getMessage("onlineModel")} · ${settings.llm.provider}`,
       error: error.message,
       reason,
       ...(error.code ? { errorCode: error.code } : {}),
@@ -173,7 +172,7 @@ chrome.runtime.onInstalled.addListener(() => {
     void chrome.runtime.lastError;
     chrome.contextMenus.create({
       id: "convert-selection",
-      title: "检测并转换时间",
+      title: getMessage("contextMenu"),
       contexts: ["selection"],
     }, () => {
       if (chrome.runtime.lastError) {
@@ -203,27 +202,12 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     return true;
   }
 
-  if (message.type === "REPORT_CASE") {
-    (async () => {
-      const payload = buildReportPayload({
-        rawText: message.rawText,
-        result: message.result,
-        referenceContext: message.referenceContext,
-        anonymousInstallId: message.anonymousInstallId,
-        magicCode: message.magicCode,
-        extensionVersion: chrome.runtime.getManifest().version,
-      });
-      sendResponse(await postCaseReport({ payload }));
-    })().catch((error) => sendResponse({ ok: false, reason: error.message }));
-    return true;
-  }
-
   if (message.type === "PARSE_TEXT" || message.type === "TEST_LLM") {
     (async () => {
       const settings = message.settings || (await loadSettings());
       const text = String(message.text || "").trim();
       if (!text || (!isTimeCandidate(text, { customKeywords: settings.customKeywords }) && message.type !== "TEST_LLM")) {
-        sendResponse({ ok: false, reason: "这段文字看起来不包含具体时间" });
+        sendResponse({ ok: false, reason: getMessage("notTimeCandidate") });
         return;
       }
       sendResponse(

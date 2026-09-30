@@ -1,0 +1,6 @@
+{
+  "extensionName": { "message": "Time Translator – Time Zone Converter" },
+  "extensionDescription": { "message": "Convert selected English time expressions to your timezone using your own AI API key." },
+  "extensionTitle": { "message": "Time Translator – Time Zone Converter" },
+  "convertSelection": { "message": "Convert selected time expression" }
+}

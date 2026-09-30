@@ -62,6 +62,12 @@ test("英国时间转换可以跨到北京时间次日", () => {
   assert.equal(formatBeijingDateTime(instant), "2026/08/21（周五）06:30");
 });
 
+test("英文结果按指定目标时区显示英文星期而非北京时间", () => {
+  const instant = new Date("2026-08-20T23:30:00.000Z");
+  assert.equal(formatBeijingDateTime(instant, "America/New_York", "en"), "2026/08/20 (Thu) 19:30");
+  assert.equal(formatBeijingDateTime(instant, "Asia/Singapore", "en"), "2026/08/21 (Fri) 07:30");
+});
+
 test("today 使用源时区的当地日期", () => {
   const parts = getZonedDateParts(reference, "Europe/London");
   assert.deepEqual(parts, {

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { getAnonymousInstallId, getInstallId, isVipInstallId, setInstallId } from "../src/shared/install-id.js";
+import { getInstallId, isVipInstallId, setInstallId } from "../src/shared/install-id.js";
 
 test("Magic Code 默认留空，用户填写 emma 后可启用 VIP", async () => {
   const values = {};
@@ -36,13 +36,5 @@ test("Magic Code 默认留空，用户填写 emma 后可启用 VIP", async () =>
   assert.equal(await getInstallId(storage), "");
   assert.equal(isVipInstallId(""), false);
   assert.equal(writes, 2);
-
-  const anonymousId = await getAnonymousInstallId(storage);
-  const sameAnonymousId = await getAnonymousInstallId(storage);
-  assert.match(anonymousId, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
-  assert.equal(sameAnonymousId, anonymousId);
-  assert.equal(globalThis.__TIME_TRANSLATOR_ANONYMOUS_INSTALL_ID__, anonymousId);
-  assert.equal(values.anonymousInstallId, anonymousId);
   assert.equal(values.installId, "");
-  assert.equal(writes, 3);
 });

@@ -1,4 +1,5 @@
 const WEEKDAYS = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
+const ENGLISH_WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 const datePartFormatterCache = new Map();
 let canonicalTimeZoneMap;
@@ -196,9 +197,10 @@ export function formatFixedOffsetName(offsetMinutes) {
   return `UTC${sign}${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 }
 
-export function formatBeijingDateTime(date, timeZone = "Asia/Shanghai") {
+export function formatBeijingDateTime(date, timeZone = "Asia/Shanghai", locale = "zh") {
   const parts = getZonedDateParts(date, timeZone);
   const weekday = new Date(Date.UTC(parts.year, parts.month - 1, parts.day)).getUTCDay();
+  if (locale === "en") return `${formatDateParts(parts)} (${ENGLISH_WEEKDAYS[weekday]}) ${formatClock(parts)}`;
   return `${formatDateParts(parts)}（${WEEKDAYS[weekday]}）${formatClock(parts)}`;
 }
 
