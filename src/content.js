@@ -505,14 +505,14 @@ function tooltipStyles() {
     .card.is-combo-celebrating::after { background: rgba(255, 255, 255, .58); }
     .card.is-combo-celebrating > .flow, .card.is-combo-celebrating > .details, .card.is-combo-celebrating > .toolbar > :not(.celebrate) { opacity: .44; }
     .card.is-combo-celebrating .celebrate { opacity: 1; }
-    .flow { align-items: start; display: grid; gap: 6px; grid-template-columns: minmax(0, 1fr) auto max-content; }
+    .flow { align-items: start; display: grid; gap: 6px; grid-template-columns: minmax(80px, 1fr) auto minmax(0, max-content); }
     .side { align-self: start; min-width: 0; }
     .target-side { align-items: flex-end; display: flex; flex-direction: column; }
     .source { color: #17191f; font-size: 11px; font-weight: 400; line-height: 1.25; max-width: none; overflow-wrap: break-word; white-space: normal; }
     .zone { color: #8d96a3; font-size: 8px; font-weight: 400; letter-spacing: 0; line-height: 1.2; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .target-side .zone { text-align: right; }
     .arrow { align-self: center; color: #2d5cff; font-size: 15px; font-weight: 400; line-height: 1; }
-    .result { color: #2d5cff; font-size: 12px; font-weight: 400; letter-spacing: -.01em; line-height: 1.2; text-align: right; white-space: nowrap; }
+    .result { color: #2d5cff; font-size: 12px; font-weight: 400; letter-spacing: -.01em; line-height: 1.2; overflow-wrap: anywhere; text-align: right; white-space: normal; }
     .result.loading { color: #2d5cff; font-size: 10px; font-weight: 400; }
     .result.failed { color: #d94b3f; font-size: 10px; font-weight: 400; }
     .toolbar { align-items: center; display: flex; gap: 1px; justify-content: flex-end; margin-top: 1px; }

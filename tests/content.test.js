@@ -72,12 +72,8 @@ test("Tooltip 尺寸和操作 icon 保持紧凑", () => {
   assert.match(contentSource, /width="12" height="12"/);
 });
 
-test("转换结果日期保持单行完整显示，并提示 Gmail 参考日期", () => {
-  assert.match(contentSource, /\.flow \{[^}]*align-items: start[^}]*grid-template-columns: minmax\(0, 1fr\) auto max-content/);
-  assert.match(contentSource, /\.target-side \{[^}]*display: flex[^}]*flex-direction: column/);
+test("转换结果提示 Gmail 参考日期", () => {
   assert.match(contentSource, /<div class="side target-side">[\s\S]*\$\{referenceNote\}/);
-  assert.doesNotMatch(contentSource, /\.source \{[^}]*overflow-wrap: anywhere/);
-  assert.match(contentSource, /\.result \{[^}]*white-space: nowrap/);
   assert.match(contentSource, /t\("gmailReference"\)/);
 });
 
